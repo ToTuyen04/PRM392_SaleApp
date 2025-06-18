@@ -2,11 +2,14 @@ package com.salesapp.service;
 
 import com.salesapp.dto.request.UserCreateRequest;
 import com.salesapp.dto.request.UserUpdateRequest;
+import com.salesapp.dto.response.CategoryResponse;
 import com.salesapp.dto.response.UserResponse;
+import com.salesapp.entity.Category;
 import com.salesapp.entity.User;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
 import com.salesapp.mapper.UserMapper;
+import com.salesapp.repository.CartRepository;
 import com.salesapp.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;

@@ -4,8 +4,8 @@ server:
     context-path: /
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
+    url: jdbc:mysql://score-lens-tominhtuyena7-883c.l.aivencloud.com:11824/SalesAppDB?useSSL=false&serverTimezone=UTC
+    username: avnadmin
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
