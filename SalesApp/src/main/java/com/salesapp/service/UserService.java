@@ -24,6 +24,8 @@ public class UserService {
 
     @Autowired
     UserMapper userMapper;
+
+    @Autowired
     PasswordEncoder passwordEncoder;
     //lấy ra danh sách người dùng
     public List<UserResponse> getUserList(){
