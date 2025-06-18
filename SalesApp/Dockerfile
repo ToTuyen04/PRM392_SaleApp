@@ -5,8 +5,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy project files
-COPY /scorelens/pom.xml .
-COPY /scorelens/src src
+COPY /SalesApp/pom.xml .
+COPY /SalesApp/src src
 #COPY /scorelens/uploads uploads
 #COPY "ArialUnicodeMSBold.ttf" /app/
 
