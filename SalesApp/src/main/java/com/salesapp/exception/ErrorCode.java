@@ -17,6 +17,12 @@ public enum ErrorCode {
     UNAUTHENTICATED(1004, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     USER_NOTFOUND(1005, "User not found",HttpStatus.NOT_FOUND),
 
+    CATEGORY_NOT_FOUND(2001, "Category not found", HttpStatus.NOT_FOUND),
+    CATEGORY_NAME_EXIST(2002, "Category name already exists", HttpStatus.CONFLICT),
+
+    PRODUCT_NOT_FOUND(3001, "Product not found", HttpStatus.NOT_FOUND),
+    PRODUCT_NAME_EXIST(3002, "Product name already exists", HttpStatus.CONFLICT),
+
     ;
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;

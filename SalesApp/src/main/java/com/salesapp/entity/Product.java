@@ -39,7 +39,7 @@ public class Product {
     private String imageURL;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CategoryID")
+    @JoinColumn(name = "CategoryID", nullable = false)
     private Category categoryID;
 
     @OneToMany(mappedBy = "productID")
