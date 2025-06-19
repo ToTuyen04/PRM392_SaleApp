@@ -3,11 +3,12 @@ package com.salesapp.controller.v1;
 import com.salesapp.dto.request.ProductRequest;
 import com.salesapp.dto.response.ProductResponse;
 import com.salesapp.service.ProductService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Tag(name = "Product", description = "Manage Products")
 @RestController
 @RequestMapping("/v1/products")
 @RequiredArgsConstructor
