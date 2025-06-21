@@ -3,11 +3,12 @@ package com.salesapp.controller.v1;
 import com.salesapp.dto.request.CategoryCreateRequest;
 import com.salesapp.dto.response.CategoryResponse;
 import com.salesapp.service.CategoryService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Tag(name = "Category", description = "Manage Categories")
 @RestController
 @RequestMapping("/v1/categories")
 @RequiredArgsConstructor
