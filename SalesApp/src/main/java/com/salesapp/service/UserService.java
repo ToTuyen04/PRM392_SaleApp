@@ -55,14 +55,16 @@ public class UserService {
 
     public UserResponse updateUser(int id, UserUpdateRequest request) {
         User u = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND));
-        String email = request.getEmail();
-        if(userRepository.findByEmail(email) != null){
-            throw new AppException(ErrorCode.EMAL_EXIST);
-        }
-        String phoneNumber = request.getPhoneNumber();
-        if(userRepository.findByPhoneNumber(phoneNumber) != null){
-            throw new AppException(ErrorCode.PHONE_EXIST);
-        }
+        String newEmail = request.getEmail();
+        if(newEmail != null && !newEmail.isEmpty() && !newEmail.equals(u.getEmail()))
+            if(userRepository.findByEmail(newEmail).isPresent())
+                throw new AppException(ErrorCode.EMAL_EXIST);
+
+        String newPhoneNumber = request.getPhoneNumber();
+        if(newPhoneNumber != null && !newPhoneNumber.isEmpty() && !newPhoneNumber.equals(u.getPhoneNumber()))
+            if(userRepository.findByPhoneNumber(newPhoneNumber).isPresent())
+                throw new AppException(ErrorCode.PHONE_EXIST);
+
         userMapper.updateUser(u, request);
         userRepository.save(u);
         return userMapper.toDto(u);

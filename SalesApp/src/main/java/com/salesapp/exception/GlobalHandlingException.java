@@ -23,6 +23,7 @@ public class GlobalHandlingException {
                         .message(e.getMessage())
                         .build());
     }
+
     @ExceptionHandler(value = AppException.class)
     ResponseEntity<ResponseObject> HandlingAppException(AppException e) {
         ErrorCode errorCode = e.getErrorCode();
@@ -30,14 +31,14 @@ public class GlobalHandlingException {
         responseObject.setStatus(errorCode.getCode());
         responseObject.setMessage(errorCode.getMessage());
 
-        return ResponseEntity.status(errorCode.getCode()).body(responseObject);
+        return ResponseEntity.status(errorCode.getStatusCode()).body(responseObject);
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
     ResponseEntity<ResponseObject> HandlingAccessDeniedException(AccessDeniedException e) {
         ErrorCode errorCode = ErrorCode.UNAUTHORIZE;
 
-        return ResponseEntity.status(errorCode.getCode()).body(
+        return ResponseEntity.status(errorCode.getStatusCode()).body(
             ResponseObject.builder()
                     .status(errorCode.getCode())
                     .message(errorCode.getMessage())
@@ -60,7 +61,7 @@ public class GlobalHandlingException {
 
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ResponseObject.builder()
-                    .status(400)
+                    .status(errorCode.getCode())
                     .message(messageKey) // Hiển thị luôn message gốc
                     .build());
         }
