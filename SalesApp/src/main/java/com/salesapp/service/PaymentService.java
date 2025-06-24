@@ -6,6 +6,7 @@ import com.salesapp.entity.Payment;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
 import com.salesapp.mapper.PaymentMapper;
+import com.salesapp.mapper.PaymentMapper.OrderMapperSupport;
 import com.salesapp.repository.OrderRepository;
 import com.salesapp.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final PaymentMapper paymentMapper;
+    private final OrderMapperSupport orderMapperSupport;
 
     public List<PaymentResponse> getAllPayments() {
         return paymentMapper.toPayments(paymentRepository.findAll());
@@ -31,10 +33,14 @@ public class PaymentService {
     }
 
     public PaymentResponse createPayment(PaymentRequest request) {
-        var order = orderRepository.findById(request.getOrderID())
+        // Order validation vẫn nên giữ
+        orderRepository.findById(request.getOrderID())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-        Payment payment = paymentMapper.toEntity(request);
+
+        // Dùng mapper với context
+        Payment payment = paymentMapper.toEntity(request, orderMapperSupport);
         paymentRepository.save(payment);
+
         return paymentMapper.toPayment(payment);
     }
 }

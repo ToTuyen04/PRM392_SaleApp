@@ -5,38 +5,38 @@ import com.salesapp.dto.response.ProductResponse;
 import com.salesapp.entity.Category;
 import com.salesapp.entity.Product;
 import org.mapstruct.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
-public abstract class ProductMapper {
-    @Autowired
-    protected CategoryMapperSupport categoryMapperSupport;
+public interface ProductMapper {
 
-    public abstract List<ProductResponse> toDto(List<Product> products);
-
-    @Mapping(source = "categoryID", target = "categoryID")
+    @Mapping(source = "categoryID.id", target = "categoryID")
     @Mapping(source = "categoryID.categoryName", target = "categoryName")
-    public abstract ProductResponse toDto(Product product);
+    ProductResponse toDto(Product product);
+
+    List<ProductResponse> toDto(List<Product> products);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "categoryID", expression = "java(categoryMapperSupport.mapCategoryId(request.getCategoryID()))")
-    public abstract Product toProduct(ProductRequest request);
+    Product toProduct(ProductRequest request, @Context CategoryMapperSupport categoryMapperSupport);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "categoryID", expression = "java(categoryMapperSupport.mapCategoryId(request.getCategoryID()))")
-    public abstract void updateProduct(@MappingTarget Product product, ProductRequest request);
+    void updateProduct(@MappingTarget Product product, ProductRequest request, @Context CategoryMapperSupport categoryMapperSupport);
 
-    protected Integer map(Category category) {
+    // Ánh xạ để hiển thị ID ra response
+    default Integer mapCategoryToId(Category category) {
         return category != null ? category.getId() : null;
     }
 
-    @Component
-    public static class CategoryMapperSupport {
-        @Autowired
-        private com.salesapp.repository.CategoryRepository categoryRepository;
+    // Context Helper
+    class CategoryMapperSupport {
+        private final com.salesapp.repository.CategoryRepository categoryRepository;
+
+        public CategoryMapperSupport(com.salesapp.repository.CategoryRepository categoryRepository) {
+            this.categoryRepository = categoryRepository;
+        }
 
         public Category mapCategoryId(Integer categoryId) {
             return categoryRepository.findById(categoryId).orElse(null);

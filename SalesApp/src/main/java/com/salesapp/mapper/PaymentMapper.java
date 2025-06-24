@@ -6,35 +6,34 @@ import com.salesapp.entity.Order;
 import com.salesapp.entity.Payment;
 import com.salesapp.repository.OrderRepository;
 import org.mapstruct.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = PaymentMapper.OrderMapperSupport.class)
-public abstract class PaymentMapper {
-
-    @Autowired
-    protected OrderMapperSupport orderMapperSupport;
+@Mapper(componentModel = "spring")
+public interface PaymentMapper {
 
     @Mapping(source = "orderID.id", target = "orderID")
-    public abstract PaymentResponse toPayment(Payment payment);
+    PaymentResponse toPayment(Payment payment);
 
-    public abstract List<PaymentResponse> toPayments(List<Payment> payments);
+    List<PaymentResponse> toPayments(List<Payment> payments);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "paymentDate", expression = "java(java.time.Instant.now())")
     @Mapping(target = "orderID", expression = "java(orderMapperSupport.mapOrder(request.getOrderID()))")
-    public abstract Payment toEntity(PaymentRequest request);
+    Payment toEntity(PaymentRequest request, @Context OrderMapperSupport orderMapperSupport);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "orderID", expression = "java(orderMapperSupport.mapOrder(request.getOrderID()))")
-    public abstract void updatePayment(@MappingTarget Payment payment, PaymentRequest request);
+    void updatePayment(@MappingTarget Payment payment, PaymentRequest request, @Context OrderMapperSupport orderMapperSupport);
 
     @Component
-    public static class OrderMapperSupport {
-        @Autowired
-        private OrderRepository orderRepository;
+    class OrderMapperSupport {
+        private final OrderRepository orderRepository;
+
+        public OrderMapperSupport(OrderRepository orderRepository) {
+            this.orderRepository = orderRepository;
+        }
 
         public Order mapOrder(Integer orderId) {
             return orderRepository.findById(orderId).orElse(null);

@@ -6,6 +6,8 @@ import com.salesapp.entity.Product;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
 import com.salesapp.mapper.ProductMapper;
+import com.salesapp.mapper.ProductMapper.CategoryMapperSupport;
+import com.salesapp.repository.CategoryRepository;
 import com.salesapp.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private final CategoryRepository categoryRepository;
 
     public List<ProductResponse> getAllProducts() {
         return productMapper.toDto(productRepository.findAll());
@@ -33,7 +36,10 @@ public class ProductService {
         if (productRepository.existsByProductName(request.getProductName())) {
             throw new AppException(ErrorCode.PRODUCT_NAME_EXIST);
         }
-        Product product = productMapper.toProduct(request);
+
+        // Sử dụng CategoryMapperSupport
+        CategoryMapperSupport support = new CategoryMapperSupport(categoryRepository);
+        Product product = productMapper.toProduct(request, support);
         productRepository.save(product);
         return productMapper.toDto(product);
     }
@@ -41,7 +47,9 @@ public class ProductService {
     public ProductResponse updateProduct(Integer id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
-        productMapper.updateProduct(product, request);
+
+        CategoryMapperSupport support = new CategoryMapperSupport(categoryRepository);
+        productMapper.updateProduct(product, request, support);
         productRepository.save(product);
         return productMapper.toDto(product);
     }

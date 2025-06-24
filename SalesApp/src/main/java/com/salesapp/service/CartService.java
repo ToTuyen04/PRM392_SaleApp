@@ -45,7 +45,7 @@ public class CartService {
     }
 
     public CartResponse addToCart(int userId, CartItemRequest request) {
-        // Tìm giỏ hàng active của user, nếu không có thì tạo mới
+        // Tìm cart active của user, nếu chưa có thì tạo mới
         Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
         if (cart == null) {
             cart = new Cart();
@@ -54,29 +54,35 @@ public class CartService {
             cart.setStatus("active");
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.setCartItems(new LinkedHashSet<>());
-            cartRepository.save(cart);
+            cart = cartRepository.save(cart); // Lưu lần đầu để lấy cartID
         }
 
-        // Tìm sản phẩm
+        // Tìm sản phẩm từ productID
         Product product = productRepository.findById(request.getProductID())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Tạo CartItem
+        // Tạo mới CartItem
         CartItem item = new CartItem();
         item.setCartID(cart);
         item.setProductID(product);
         item.setQuantity(request.getQuantity());
         item.setPrice(product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
 
-        // Cập nhật cart
-        cart.getCartItems().add(item);
-        cart.setTotalPrice(cart.getTotalPrice().add(item.getPrice()));
-
-        cartRepository.save(cart);
+        // Lưu CartItem trước
         cartItemRepository.save(item);
+        cart.getCartItems().add(item);
 
-        return mapCart(cart);
+        // Cập nhật lại tổng tiền cho cart
+        cart.setTotalPrice(cart.getTotalPrice().add(item.getPrice()));
+        cartRepository.save(cart);
+
+        // ⚠️ Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
+        Cart updatedCart = cartRepository.findById(cart.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+
+        return mapCart(updatedCart);
     }
+
 
 
     public CartResponse updateCartItemQuantity(int userId, CartItemUpdateRequest request) {
