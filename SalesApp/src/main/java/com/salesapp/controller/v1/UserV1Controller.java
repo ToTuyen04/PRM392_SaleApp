@@ -21,7 +21,7 @@ public class UserV1Controller {
     @Autowired
     UserService userService;
 
-    @DeleteMapping("/id")
+    @DeleteMapping("/{id}")
     public ResponseObject<UserResponse> deleteUser(@PathVariable int id){
         userService.deleteUser(id);
         return ResponseObject.<UserResponse>builder()
@@ -30,7 +30,7 @@ public class UserV1Controller {
                 .build();
     }
 
-    @PutMapping("/id")
+    @PutMapping("/{id}")
     public ResponseObject<UserResponse> updateUser(@PathVariable int id, @RequestBody UserUpdateRequest request){
         var user = userService.updateUser(id, request);
         return ResponseObject.<UserResponse>builder()
