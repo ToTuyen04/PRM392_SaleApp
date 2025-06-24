@@ -23,7 +23,8 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(3001, "Product not found", HttpStatus.NOT_FOUND),
     PRODUCT_NAME_EXIST(3002, "Product name already exists", HttpStatus.CONFLICT),
 
-    ;
+    USER_NOT_FOUND(1006, "User not found", HttpStatus.NOT_FOUND),
+    INCORECT_PASSWORD(1007, "Password is incorrect", HttpStatus.BAD_REQUEST);
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;
         this.message = message;
