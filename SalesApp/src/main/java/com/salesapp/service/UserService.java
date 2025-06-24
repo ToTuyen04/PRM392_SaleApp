@@ -2,14 +2,11 @@ package com.salesapp.service;
 
 import com.salesapp.dto.request.UserCreateRequest;
 import com.salesapp.dto.request.UserUpdateRequest;
-import com.salesapp.dto.response.CategoryResponse;
 import com.salesapp.dto.response.UserResponse;
-import com.salesapp.entity.Category;
 import com.salesapp.entity.User;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
 import com.salesapp.mapper.UserMapper;
-import com.salesapp.repository.CartRepository;
 import com.salesapp.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -42,11 +39,11 @@ public class UserService {
 
     public UserResponse createUser(UserCreateRequest request){
         String email = request.getEmail();
-        if(userRepository.existsByEmail(email)){
+        if(userRepository.findByEmail(email) != null){
             throw new AppException(ErrorCode.EMAL_EXIST);
         }
         String phoneNumber = request.getPhoneNumber();
-        if(userRepository.existsByPhoneNumber(phoneNumber)){
+        if(userRepository.findByPhoneNumber(phoneNumber) != null){
             throw new AppException(ErrorCode.PHONE_EXIST);
         }
         User u = userMapper.toUser(request);
@@ -59,11 +56,11 @@ public class UserService {
     public UserResponse updateUser(int id, UserUpdateRequest request) {
         User u = userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND));
         String email = request.getEmail();
-        if(userRepository.existsByEmail(email)){
+        if(userRepository.findByEmail(email) != null){
             throw new AppException(ErrorCode.EMAL_EXIST);
         }
         String phoneNumber = request.getPhoneNumber();
-        if(userRepository.existsByPhoneNumber(phoneNumber)){
+        if(userRepository.findByPhoneNumber(phoneNumber) != null){
             throw new AppException(ErrorCode.PHONE_EXIST);
         }
         userMapper.updateUser(u, request);
