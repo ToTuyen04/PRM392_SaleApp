@@ -42,7 +42,7 @@ public class UserV1Controller {
 
     @PostMapping
     public ResponseObject<UserResponse> createUser(@RequestBody UserCreateRequest request){
-        var user = userService.createUser(request);
+        var user = userService.createUser(request, false);
         return ResponseObject.<UserResponse>builder()
                 .status(1000)
                 .data(user)

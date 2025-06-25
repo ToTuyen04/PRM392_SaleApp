@@ -2,12 +2,19 @@ package com.salesapp.service;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.salesapp.dto.request.AuthenticationRequest;
+import com.salesapp.dto.request.IntrospectRequest;
+import com.salesapp.dto.request.LogoutRequest;
 import com.salesapp.dto.response.AuthenticationResponse;
+import com.salesapp.dto.response.IntrospectResponse;
+import com.salesapp.entity.InvalidatedToken;
 import com.salesapp.entity.User;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
+import com.salesapp.repository.InvalidatedTokenRepository;
 import com.salesapp.mapper.UserMapper;
 import com.salesapp.repository.UserRepository;
 import lombok.AccessLevel;
@@ -20,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -33,6 +41,7 @@ import java.util.UUID;
 public class AuthenticationService {
     UserRepository userRepository;
     UserMapper userMapper;
+    InvalidatedTokenRepository invalidatedTokenRepository;
     PasswordEncoder passwordEncoder;
 
     @NonFinal
@@ -63,6 +72,24 @@ public class AuthenticationService {
                 .build();
     }
 
+    public void logout(LogoutRequest request) throws ParseException, JOSEException {
+        try {
+            var signToken = verifyToken(request.getToken());
+
+            String jti = signToken.getJWTClaimsSet().getJWTID();
+            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
+
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .id(jti)
+                    .expiryTime(expiryTime)
+                    .build();
+
+            invalidatedTokenRepository.save(invalidatedToken);
+        } catch (AppException e){
+            log.info("Token is already expired");
+        }
+    }
+
     private String generateToken(User user){
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
@@ -91,8 +118,36 @@ public class AuthenticationService {
     private String buildScope(User user){
         StringJoiner stringJoiner = new StringJoiner(" ");
 
-        stringJoiner.add("ROLE_" + user.getRole().toUpperCase());
+        stringJoiner.add("ROLE_" + user.getRole());
         return stringJoiner.toString();
+    }
+
+    private SignedJWT verifyToken(String token) throws JOSEException, ParseException {
+        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+        var verified = signedJWT.verify(verifier);
+        if(!(verified && expiryTime.after(new Date())))
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        if(invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        return signedJWT;
+    }
+
+    public IntrospectResponse introspect(IntrospectRequest request) throws ParseException, JOSEException {
+        var token = request.getToken();
+        boolean isValid = true;
+        try {
+            verifyToken(token);
+        } catch (AppException e) {
+            isValid = false;
+        }
+        return IntrospectResponse.builder()
+                .valid(isValid)
+                .build();
     }
 
 }

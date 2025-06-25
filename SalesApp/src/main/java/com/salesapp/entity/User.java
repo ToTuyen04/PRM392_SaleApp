@@ -1,5 +1,6 @@
 package com.salesapp.entity;
 
+import com.salesapp.enums.RoleEnum;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +34,8 @@ public class User {
     private String address;
 
     @Column(name = "Role", nullable = false, length = 50)
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private RoleEnum role;
 
     @OneToMany(mappedBy = "userID")
     private Set<Cart> carts = new LinkedHashSet<>();
