@@ -14,7 +14,4 @@ public class PaymentResponse {
     private BigDecimal amount;
     private Instant paymentDate;
     private String paymentStatus;
-
-    //code...
-    //implement...
 }

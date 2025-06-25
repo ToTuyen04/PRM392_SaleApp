@@ -76,7 +76,7 @@ public class CartService {
         cart.setTotalPrice(cart.getTotalPrice().add(item.getPrice()));
         cartRepository.save(cart);
 
-        // ⚠️ Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
+        // Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
         Cart updatedCart = cartRepository.findById(cart.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
 
@@ -123,7 +123,7 @@ public class CartService {
         return mapCart(cart);
     }
 
-    // ✅ Tính lại total price từ các cartItem
+    // Tính lại total price từ các cartItem
     private void recalculateTotalPrice(Cart cart) {
         BigDecimal total = cart.getCartItems().stream()
                 .filter(ci -> ci.getPrice() != null)
@@ -132,7 +132,7 @@ public class CartService {
         cart.setTotalPrice(total);
     }
 
-    // ✅ Đảm bảo không có cartItem null trong response
+    // Đảm bảo không có cartItem null trong response
     private CartResponse mapCart(Cart cart) {
         CartResponse res = cartMapper.toDto(cart);
         res.setCartItems(cartMapper.toCartItems(
@@ -142,4 +142,5 @@ public class CartService {
         ));
         return res;
     }
+
 }

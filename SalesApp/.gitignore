@@ -39,3 +39,5 @@ build/
 ### environment ###
 *.env
 *.env.local
+*.application-temp
+*.application-temp.local

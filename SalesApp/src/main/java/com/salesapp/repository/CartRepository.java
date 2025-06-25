@@ -15,6 +15,7 @@ public interface CartRepository extends JpaRepository<Cart, Integer> {
     List<Cart> findByUserID_Id(Integer userId);
 
     // Lấy cart active (chưa cần fetch cartItems)
+    @EntityGraph(attributePaths = {"cartItems", "cartItems.productID"})
     Cart findByUserID_IdAndStatus(Integer userId, String status);
 
     // ✅ Lấy cart theo ID, luôn load cartItems và product
