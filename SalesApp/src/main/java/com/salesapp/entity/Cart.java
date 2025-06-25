@@ -13,6 +13,7 @@ import java.util.Set;
 @Entity
 @Table(name = "Carts")
 public class Cart {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "CartID", nullable = false)
@@ -28,10 +29,10 @@ public class Cart {
     @Column(name = "Status", nullable = false, length = 50)
     private String status;
 
-    @OneToMany(mappedBy = "cartID")
+    @OneToMany(mappedBy = "cartID", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CartItem> cartItems = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "cartID")
+    @OneToMany(mappedBy = "cartID", fetch = FetchType.LAZY)
     private Set<Order> orders = new LinkedHashSet<>();
-
 }
