@@ -4,6 +4,7 @@ import com.salesapp.dto.request.UserCreateRequest;
 import com.salesapp.dto.request.UserUpdateRequest;
 import com.salesapp.dto.response.UserResponse;
 import com.salesapp.entity.User;
+import com.salesapp.enums.RoleEnum;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
 import com.salesapp.mapper.UserMapper;
@@ -37,18 +38,20 @@ public class UserService {
         return userMapper.toDto(userRepository.findById(id).get());
     }
 
-    public UserResponse createUser(UserCreateRequest request){
+    public UserResponse createUser(UserCreateRequest request, boolean isRegister){
         String email = request.getEmail();
-        if(userRepository.findByEmail(email) != null){
+        if(userRepository.findByEmail(email).isPresent()){
             throw new AppException(ErrorCode.EMAL_EXIST);
         }
         String phoneNumber = request.getPhoneNumber();
-        if(userRepository.findByPhoneNumber(phoneNumber) != null){
+        if(userRepository.findByPhoneNumber(phoneNumber).isPresent()){
             throw new AppException(ErrorCode.PHONE_EXIST);
         }
         User u = userMapper.toUser(request);
         //mã hóa password người dùng
         u.setPasswordHash(passwordEncoder.encode(request.getPasswordHash()));
+        if(isRegister)
+            u.setRole(RoleEnum.CUSTOMER);
         userRepository.save(u);
         return userMapper.toDto(u);
     }

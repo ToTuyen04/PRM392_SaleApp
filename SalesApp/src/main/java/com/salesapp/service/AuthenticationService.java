@@ -10,9 +10,11 @@ import com.salesapp.dto.request.IntrospectRequest;
 import com.salesapp.dto.request.LogoutRequest;
 import com.salesapp.dto.response.AuthenticationResponse;
 import com.salesapp.dto.response.IntrospectResponse;
+import com.salesapp.entity.InvalidatedToken;
 import com.salesapp.entity.User;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
+import com.salesapp.mapper.InvalidatedTokenRepository;
 import com.salesapp.mapper.UserMapper;
 import com.salesapp.repository.UserRepository;
 import lombok.AccessLevel;
@@ -39,6 +41,7 @@ import java.util.UUID;
 public class AuthenticationService {
     UserRepository userRepository;
     UserMapper userMapper;
+    InvalidatedTokenRepository invalidatedTokenRepository;
     PasswordEncoder passwordEncoder;
 
     @NonFinal
@@ -76,6 +79,12 @@ public class AuthenticationService {
             String jti = signToken.getJWTClaimsSet().getJWTID();
             Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
 
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .id(jti)
+                    .expiryTime(expiryTime)
+                    .build();
+
+            invalidatedTokenRepository.save(invalidatedToken);
         } catch (AppException e){
             log.info("Token is already expired");
         }
@@ -109,7 +118,7 @@ public class AuthenticationService {
     private String buildScope(User user){
         StringJoiner stringJoiner = new StringJoiner(" ");
 
-        stringJoiner.add("ROLE_" + user.getRole().toUpperCase());
+        stringJoiner.add("ROLE_" + user.getRole());
         return stringJoiner.toString();
     }
 
@@ -122,6 +131,8 @@ public class AuthenticationService {
 
         var verified = signedJWT.verify(verifier);
         if(!(verified && expiryTime.after(new Date())))
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        if(invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         return signedJWT;
     }

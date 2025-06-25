@@ -1,9 +1,8 @@
 package com.salesapp.config;
 
 import com.nimbusds.jose.JOSEException;
+import com.salesapp.dto.request.IntrospectRequest;
 import com.salesapp.service.AuthenticationService;
-import com.scorelens.DTOs.Request.IntrospectRequestDto;
-import com.scorelens.Service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -31,7 +30,7 @@ public class CustomJwtDecoder implements JwtDecoder {
     public Jwt decode(String token) throws JwtException {
 
         try {
-            var response = authenticationService.introspect(IntrospectRequestDto.builder()
+            var response = authenticationService.introspect(IntrospectRequest.builder()
                     .token(token)
                     .build());
             if(!response.isValid())
