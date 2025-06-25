@@ -4,6 +4,10 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Ignore application config (để tránh lộ thông tin nhạy cảm)
+src/main/resources/application.yaml
+src/main/resources/application.yml
+
 ### STS ###
 .apt_generated
 .classpath
