@@ -1,4 +1,4 @@
-package com.salesapp.mapper;
+package com.salesapp.repository;
 
 import com.salesapp.entity.InvalidatedToken;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -14,7 +14,7 @@ import com.salesapp.entity.InvalidatedToken;
 import com.salesapp.entity.User;
 import com.salesapp.exception.AppException;
 import com.salesapp.exception.ErrorCode;
-import com.salesapp.mapper.InvalidatedTokenRepository;
+import com.salesapp.repository.InvalidatedTokenRepository;
 import com.salesapp.mapper.UserMapper;
 import com.salesapp.repository.UserRepository;
 import lombok.AccessLevel;
