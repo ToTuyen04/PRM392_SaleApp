@@ -4,9 +4,12 @@ import com.salesapp.dto.request.ProductRequest;
 import com.salesapp.dto.response.ProductResponse;
 import com.salesapp.dto.response.ResponseObject;
 import com.salesapp.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
@@ -69,6 +72,28 @@ public class ProductV1Controller {
                 .status(1000)
                 .message("Product deleted")
                 .data(null)
+                .build();
+    }
+
+    @PostMapping(value = "/{id}/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload image for product", description = "Upload an image file for a specific product")
+    public ResponseObject<ProductResponse> uploadImage(
+            @PathVariable Integer id,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseObject.<ProductResponse>builder()
+                .status(1000)
+                .message("Product image uploaded successfully")
+                .data(productService.uploadProductImage(id, file))
+                .build();
+    }
+
+    @DeleteMapping("/{id}/image")
+    @Operation(summary = "Delete product image", description = "Delete the image of a specific product")
+    public ResponseObject<ProductResponse> deleteImage(@PathVariable Integer id) {
+        return ResponseObject.<ProductResponse>builder()
+                .status(1000)
+                .message("Product image deleted successfully")
+                .data(productService.deleteProductImage(id))
                 .build();
     }
 }
