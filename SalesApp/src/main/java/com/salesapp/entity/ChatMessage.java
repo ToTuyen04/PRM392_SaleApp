@@ -17,16 +17,29 @@ public class ChatMessage {
     @Column(name = "ChatMessageID", nullable = false)
     private Integer id;
 
+    // Người gửi (user khách)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "UserID")
     private User userID;
 
+    // Người nhận (AI hoặc nhân viên - cũng là User)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ReceiverID")
+    private User receiver;
+
     @Lob
-    @Column(name = "Message")
+    @Column(name = "Message", nullable = false)
     private String message;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "SentAt", nullable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private Instant sentAt;
 
+    @Column(name = "FromAI", nullable = false)
+    @ColumnDefault("false")
+    private boolean fromAI;
+
+    @Column(name = "ForwardedToHuman", nullable = false)
+    @ColumnDefault("false")
+    private boolean forwardedToHuman;
 }

@@ -40,13 +40,17 @@ public class User {
     @OneToMany(mappedBy = "userID")
     private Set<Cart> carts = new LinkedHashSet<>();
 
+    // ✅ Danh sách tin nhắn gửi
     @OneToMany(mappedBy = "userID")
-    private Set<ChatMessage> chatMessages = new LinkedHashSet<>();
+    private Set<ChatMessage> sentMessages = new LinkedHashSet<>();
+
+    // ✅ Danh sách tin nhắn nhận
+    @OneToMany(mappedBy = "receiver")
+    private Set<ChatMessage> receivedMessages = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "userID")
     private Set<Notification> notifications = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "userID")
     private Set<Order> orders = new LinkedHashSet<>();
-
 }

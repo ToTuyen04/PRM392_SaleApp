@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat với AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        .chat-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .messages { border: 1px solid #ddd; height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+        .message { margin: 5px 0; }
+        .user { color: #007BFF; }
+        .ai { color: green; }
+        .support { color: red; font-style: italic; }
+        input[type="text"] { width: 80%; padding: 10px; }
+        button { width: 18%; padding: 10px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h2>Trò chuyện với AI</h2>
+    <div id="messages" class="messages"></div>
+    <input type="text" id="messageInput" placeholder="Nhập tin nhắn..."/>
+    <button onclick="sendMessage()">Gửi</button>
+</div>
+
+<script>
+    const userID = 1; // test giả lập user
+    const socket = new SockJS('/ws-chat');
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, () => {
+        // Nhận phản hồi từ AI hoặc nhân viên
+        stompClient.subscribe(`/topic/messages/${userID}`, (msg) => {
+            const data = JSON.parse(msg.body);
+            appendMessage(data.message, data.fromAI, data.needHumanSupport);
+        });
+    });
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        // Hiển thị tin nhắn người dùng
+        appendMessage(msg, false, false);
+
+        // Gửi đến server qua WebSocket
+        stompClient.send("/app/chat", {}, JSON.stringify({
+            userID: userID,
+            message: msg,
+            fromAI: false,
+            toAdmin: false
+        }));
+
+        input.value = '';
+    }
+
+    function appendMessage(message, isAI, needHuman) {
+        const messages = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = "message " + (isAI ? "ai" : "user");
+        div.innerText = (isAI ? "AI: " : "Bạn: ") + message;
+        messages.appendChild(div);
+
+        if (isAI && needHuman) {
+            const notify = document.createElement('div');
+            notify.className = "message support";
+            notify.innerText = "🔔 Đang kết nối với nhân viên hỗ trợ...";
+            messages.appendChild(notify);
+        }
+
+        messages.scrollTop = messages.scrollHeight;
+    }
+</script>
+</body>
+</html>
