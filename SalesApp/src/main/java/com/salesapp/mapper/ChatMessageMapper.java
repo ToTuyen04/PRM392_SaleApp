@@ -12,7 +12,7 @@ public interface ChatMessageMapper {
 
     @Mapping(source = "userID.id", target = "userID")
     @Mapping(source = "receiver.id", target = "receiverID")
-    ChatMessageResponse toDto(ChatMessage message);
+    ChatMessageResponse toResponse(ChatMessage entity);
 
-    List<ChatMessageResponse> toDtoList(List<ChatMessage> messages);
+    // Không cần tạo từ request → entity vì dùng service xử lý trực tiếp do có User thực thể.
 }

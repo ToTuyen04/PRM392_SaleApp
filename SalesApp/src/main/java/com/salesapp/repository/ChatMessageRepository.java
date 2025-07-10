@@ -1,7 +1,6 @@
 package com.salesapp.repository;
 
 import com.salesapp.entity.ChatMessage;
-import com.salesapp.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -9,13 +8,23 @@ import java.util.List;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Integer> {
 
-    // Lấy toàn bộ tin nhắn mà user là người gửi hoặc người nhận
-    List<ChatMessage> findAllByUserIDOrReceiverOrderBySentAtAsc(User userID, User receiver);
+    // ✅ Tìm lịch sử giữa 2 người dùng bất kỳ (bao gồm cả AI)
+    @Query("""
+        SELECT m FROM ChatMessage m 
+        WHERE 
+            (m.userID.id = :userID AND m.receiver.id = :receiverID) OR 
+            (m.userID.id = :receiverID AND m.receiver.id = :userID)
+        ORDER BY m.sentAt ASC
+        """)
+    List<ChatMessage> findChatBetweenUsers(Integer userID, Integer receiverID);
 
-    // Lấy cuộc trò chuyện 2 chiều giữa 2 người
-    @Query("SELECT c FROM ChatMessage c WHERE " +
-            "(c.userID = :user1 AND c.receiver = :user2) OR " +
-            "(c.userID = :user2 AND c.receiver = :user1) " +
-            "ORDER BY c.sentAt ASC")
-    List<ChatMessage> findChatBetweenUsers(User user1, User user2);
+    // ✅ Lấy lịch sử với AI (ID mặc định là 23)
+    @Query("""
+        SELECT m FROM ChatMessage m
+        WHERE 
+            (m.userID.id = :userID AND m.receiver.id = 23) OR 
+            (m.userID.id = 23 AND m.receiver.id = :userID)
+        ORDER BY m.sentAt ASC
+        """)
+    List<ChatMessage> findChatWithAI(Integer userID);
 }

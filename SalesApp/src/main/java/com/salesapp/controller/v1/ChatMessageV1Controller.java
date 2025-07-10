@@ -10,32 +10,20 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/chat")
+@RequestMapping("/v1/chat")
 @RequiredArgsConstructor
 public class ChatMessageV1Controller {
 
-    private final ChatMessageService chatService;
+    private final ChatMessageService chatMessageService;
 
-    @PostMapping
-    public ResponseEntity<ChatMessageResponse> send(@RequestBody ChatMessageRequest request) {
-        return ResponseEntity.ok(chatService.sendMessage(request));
+    @PostMapping("/send")
+    public ResponseEntity<ChatMessageResponse> sendMessage(@RequestBody ChatMessageRequest request) {
+        return ResponseEntity.ok(chatMessageService.sendMessage(request));
     }
 
-    @GetMapping("/history/{userID}")
-    public ResponseEntity<List<ChatMessageResponse>> history(@PathVariable Integer userID) {
-        return ResponseEntity.ok(chatService.getUserChatHistory(userID));
-    }
-
-    @GetMapping("/ai/suggestions")
-    public ResponseEntity<List<String>> suggestions() {
-        return ResponseEntity.ok(chatService.getSuggestions());
-    }
-
-    @GetMapping("/conversation")
-    public ResponseEntity<List<ChatMessageResponse>> getConversation(
-            @RequestParam Integer userID,
-            @RequestParam Integer receiverID
-    ) {
-        return ResponseEntity.ok(chatService.getChatBetween(userID, receiverID));
+    @GetMapping("/history")
+    public ResponseEntity<List<ChatMessageResponse>> getHistory(@RequestParam Integer userID,
+                                                                @RequestParam Integer receiverID) {
+        return ResponseEntity.ok(chatMessageService.getChatHistory(userID, receiverID));
     }
 }
