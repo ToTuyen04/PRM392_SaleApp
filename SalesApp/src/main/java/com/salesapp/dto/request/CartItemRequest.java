@@ -10,5 +10,4 @@ import java.math.BigDecimal;
 public class CartItemRequest {
     private Integer productID;
     private Integer quantity;
-    private BigDecimal price;
 }

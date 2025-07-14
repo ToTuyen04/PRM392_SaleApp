@@ -59,4 +59,15 @@ public class CartV1Controller {
                 .data(cart)
                 .build();
     }
+
+    @DeleteMapping("/{userId}/clear")
+    public ResponseObject<CartResponse> clearCart(@PathVariable int userId) {
+        CartResponse cart = cartService.clearCart(userId);
+        return ResponseObject.<CartResponse>builder()
+                .status(1000)
+                .message("Cart cleared successfully")
+                .data(cart)
+                .build();
+    }
+
 }
