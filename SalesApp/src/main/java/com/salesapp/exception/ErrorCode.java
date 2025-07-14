@@ -35,6 +35,9 @@ public enum ErrorCode {
 
     /// Order
     ORDER_NOT_FOUND(5001, "Order not found", HttpStatus.NOT_FOUND),
+
+    /// Payment
+    PAYMENT_INVALID_SIGN(6001, "Payment signature is invalid", HttpStatus.BAD_REQUEST),
     ;
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;

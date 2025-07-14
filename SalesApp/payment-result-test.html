@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNPay Payment Result</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0; 
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .info { background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+        .details { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 15px 0;
+        }
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-secondary { background: #6c757d; }
+        .url-display { 
+            background: #f1f3f4; 
+            padding: 10px; 
+            border-radius: 5px; 
+            font-family: monospace; 
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 VNPay Payment Result</h1>
+        
+        <div id="status" class="status loading">
+            ⏳ Đang xử lý kết quả thanh toán...
+        </div>
+        
+        <div class="details">
+            <h3>📋 Thông tin từ VNPay:</h3>
+            <div id="vnpay-info"></div>
+        </div>
+        
+        <div class="details">
+            <h3>🔗 URL hiện tại:</h3>
+            <div class="url-display" id="current-url"></div>
+        </div>
+        
+        <div class="details">
+            <h3>📡 API Response:</h3>
+            <div id="api-response"></div>
+        </div>
+        
+        <div id="actions" style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-success" onclick="callPaymentCallback()">
+                🔄 Test Payment Callback API
+            </button>
+            <button class="btn btn-warning" onclick="callPaymentResult()">
+                🔄 Test Payment Result API
+            </button>
+            <button class="btn btn-secondary" onclick="viewOrder()">
+                📋 Xem Order
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Hiển thị thông tin VNPay
+        function displayVNPayInfo() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const vnpayInfo = {
+                'Order ID': urlParams.get('vnp_OrderInfo'),
+                'Amount': formatAmount(urlParams.get('vnp_Amount')),
+                'Response Code': urlParams.get('vnp_ResponseCode'),
+                'Transaction Status': urlParams.get('vnp_TransactionStatus'),
+                'Transaction No': urlParams.get('vnp_TransactionNo'),
+                'Bank Code': urlParams.get('vnp_BankCode'),
+                'Pay Date': formatDate(urlParams.get('vnp_PayDate'))
+            };
+            
+            let html = '';
+            for (const [key, value] of Object.entries(vnpayInfo)) {
+                html += `<p><strong>${key}:</strong> ${value || 'N/A'}</p>`;
+            }
+            
+            document.getElementById('vnpay-info').innerHTML = html;
+            document.getElementById('current-url').textContent = window.location.href;
+        }
+        
+        // Format amount (VNPay gửi amount * 100)
+        function formatAmount(amount) {
+            if (!amount) return 'N/A';
+            return (parseInt(amount) / 100).toLocaleString('vi-VN') + ' VND';
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            // 20250710220836 -> 2025-07-10 22:08:36
+            const year = dateString.substring(0, 4);
+            const month = dateString.substring(4, 6);
+            const day = dateString.substring(6, 8);
+            const hour = dateString.substring(8, 10);
+            const minute = dateString.substring(10, 12);
+            const second = dateString.substring(12, 14);
+            return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+        }
+        
+        // Gọi API payment-callback
+        async function callPaymentCallback() {
+            updateStatus('loading', '⏳ Đang gọi Payment Callback API...');
+            
+            try {
+                const url = `http://localhost:8080/v1/vnpay/payment-callback${window.location.search}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                displayApiResponse('Payment Callback', data, url);
+                
+                if (data.status === 1000) {
+                    updateStatus('success', '✅ Thanh toán thành công!');
+                } else if (data.status === 2000) {
+                    updateStatus('error', '❌ Thanh toán thất bại!');
+                } else {
+                    updateStatus('error', '⚠️ Có lỗi xảy ra!');
+                }
+                
+            } catch (error) {
+                updateStatus('error', '❌ Lỗi kết nối API!');
+                displayApiResponse('Error', { error: error.message }, '');
+            }
+        }
+        
+        // Gọi API payment-result
+        async function callPaymentResult() {
+            updateStatus('loading', '⏳ Đang gọi Payment Result API...');
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const orderId = urlParams.get('vnp_OrderInfo');
+                
+                const url = `http://localhost:8080/v1/vnpay/payment-result?orderId=${orderId}${window.location.search}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                displayApiResponse('Payment Result', data, url);
+                
+                if (data.status === 1000) {
+                    updateStatus('success', '✅ Thanh toán thành công!');
+                } else if (data.status === 2000) {
+                    updateStatus('error', '❌ Thanh toán thất bại!');
+                } else {
+                    updateStatus('error', '⚠️ Có lỗi xảy ra!');
+                }
+                
+            } catch (error) {
+                updateStatus('error', '❌ Lỗi kết nối API!');
+                displayApiResponse('Error', { error: error.message }, '');
+            }
+        }
+        
+        // Xem order
+        async function viewOrder() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('vnp_OrderInfo');
+            
+            if (!orderId) {
+                alert('Không tìm thấy Order ID!');
+                return;
+            }
+            
+            try {
+                const url = `http://localhost:8080/v1/orders/123`; // Cần thay userId thật
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                displayApiResponse('Order Info', data, url);
+                
+            } catch (error) {
+                displayApiResponse('Error', { error: error.message }, '');
+            }
+        }
+        
+        // Cập nhật status
+        function updateStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+        
+        // Hiển thị API response
+        function displayApiResponse(title, data, url) {
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.innerHTML = `
+                <h4>${title}:</h4>
+                ${url ? `<p><strong>URL:</strong> <code>${url}</code></p>` : ''}
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+        
+        // Chạy khi trang load
+        window.onload = function() {
+            displayVNPayInfo();
+            
+            // Tự động gọi API nếu có parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('vnp_OrderInfo')) {
+                setTimeout(() => {
+                    callPaymentCallback();
+                }, 1000);
+            }
+        };
+    </script>
+</body>
+</html>

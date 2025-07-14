@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNPay Callback Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🧪 VNPay Callback Tester</h1>
+    <p>Tool này giúp test API callback VNPay mà không cần thanh toán thật</p>
+
+    <form id="callbackForm">
+        <div class="form-group">
+            <label>API Endpoint:</label>
+            <input type="text" id="endpoint" value="http://localhost:8080/v1/vnpay/payment-callback" />
+        </div>
+
+        <div class="form-group">
+            <label>Order ID:</label>
+            <input type="number" id="orderId" value="123" />
+        </div>
+
+        <div class="form-group">
+            <label>Amount (VND):</label>
+            <input type="number" id="amount" value="100000" />
+        </div>
+
+        <div class="form-group">
+            <label>Transaction Status:</label>
+            <select id="transactionStatus">
+                <option value="00">00 - Thành công</option>
+                <option value="24">24 - Hủy giao dịch</option>
+                <option value="02">02 - Thất bại</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Response Code:</label>
+            <select id="responseCode">
+                <option value="00">00 - Thành công</option>
+                <option value="24">24 - Khách hàng hủy</option>
+                <option value="02">02 - Thất bại</option>
+            </select>
+        </div>
+
+        <button type="submit">🚀 Test Callback</button>
+        <button type="button" onclick="generateValidHash()">🔐 Generate Valid Hash</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('callbackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const endpoint = document.getElementById('endpoint').value;
+            const orderId = document.getElementById('orderId').value;
+            const amount = document.getElementById('amount').value;
+            const transactionStatus = document.getElementById('transactionStatus').value;
+            const responseCode = document.getElementById('responseCode').value;
+            
+            // Tạo parameters giống VNPay
+            const params = new URLSearchParams({
+                vnp_Amount: (amount * 100).toString(), // VNPay gửi amount * 100
+                vnp_BankCode: 'NCB',
+                vnp_BankTranNo: 'VNP' + Math.floor(Math.random() * 100000000),
+                vnp_CardType: 'ATM',
+                vnp_OrderInfo: orderId,
+                vnp_PayDate: new Date().toISOString().replace(/[-:T]/g, '').substring(0, 14),
+                vnp_ResponseCode: responseCode,
+                vnp_TmnCode: 'I4CFWC18',
+                vnp_TransactionNo: Math.floor(Math.random() * 100000000).toString(),
+                vnp_TransactionStatus: transactionStatus,
+                vnp_TxnRef: Math.floor(Math.random() * 100000000).toString(),
+                vnp_SecureHash: 'test_hash_' + Math.random().toString(36).substring(7)
+            });
+            
+            const url = `${endpoint}?${params.toString()}`;
+            
+            try {
+                showResult('info', '⏳ Đang gọi API...');
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', `
+                        ✅ API Response:
+                        <br><strong>Status:</strong> ${data.status}
+                        <br><strong>Message:</strong> ${data.message}
+                        <br><strong>Data:</strong> ${JSON.stringify(data.data, null, 2)}
+                        <br><br><strong>URL called:</strong><br>${url}
+                    `);
+                } else {
+                    showResult('error', `❌ Error: ${response.status} - ${response.statusText}`);
+                }
+            } catch (error) {
+                showResult('error', `❌ Network Error: ${error.message}`);
+            }
+        });
+        
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+        }
+        
+        function generateValidHash() {
+            alert('Để generate hash hợp lệ, bạn cần implement thuật toán HMAC-SHA512 với secret key của VNPay. Hiện tại đang dùng hash giả để test.');
+        }
+        
+        // Auto-fill current timestamp
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default values
+        });
+    </script>
+</body>
+</html>
