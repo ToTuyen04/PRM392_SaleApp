@@ -1,4 +1,3 @@
-
 server:
   port: 8080
   servlet:
@@ -28,3 +27,12 @@ jwt:
   signerKey: ${SIGNER_KEY}
   valid-duration: 3600
   refreshable-duration: 604800
+  gemini:
+    api:
+      url: ${URL}
+      key: ${KEY}
+
+  cloudinary:
+    cloud-name: ${CLOUD_NAME}
+    api-key: ${API_KEY}
+    api-secret: ${API_SECRET}
