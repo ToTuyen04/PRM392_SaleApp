@@ -38,6 +38,10 @@ public enum ErrorCode {
 
     /// Payment
     PAYMENT_INVALID_SIGN(6001, "Payment signature is invalid", HttpStatus.BAD_REQUEST),
+
+    /// Location
+    STORE_LOCATION_NOT_FOUND(6002, "Store location not found", HttpStatus.NOT_FOUND),
+
     ;
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;

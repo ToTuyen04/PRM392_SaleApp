@@ -25,4 +25,6 @@ public class StoreLocation {
     @Column(name = "Address", nullable = false)
     private String address;
 
+    @Column(name = "StoreName")
+    private String storeName;
 }
