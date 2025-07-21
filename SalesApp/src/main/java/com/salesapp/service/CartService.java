@@ -48,7 +48,6 @@ public class CartService {
     }
 
     public CartResponse addToCart(int userId, CartItemRequest request) {
-        // Tìm cart active của user, nếu chưa có thì tạo mới
         Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
         if (cart == null) {
             cart = new Cart();
@@ -57,10 +56,9 @@ public class CartService {
             cart.setStatus("active");
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.setCartItems(new LinkedHashSet<>());
-            cart = cartRepository.save(cart); // Lưu lần đầu để lấy cartID
+            cart = cartRepository.save(cart);
         }
 
-        // Tìm sản phẩm từ productID
         Product product = productRepository.findById(request.getProductID())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -97,14 +95,11 @@ public class CartService {
             cartRepository.save(cart);
         }
 
-        // Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
         Cart updatedCart = cartRepository.findById(cart.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
 
         return mapCart(updatedCart);
     }
-
-
 
     public CartResponse updateCartItemQuantity(int userId, CartItemUpdateRequest request) {
         Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
@@ -233,6 +228,16 @@ public class CartService {
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
 
         return mapCart(updatedCart);
+    }
+    public CartResponse clearCart(int userId) {
+        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
+        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        cartItemRepository.deleteAll(cart.getCartItems());
+        cart.getCartItems().clear();
+        cart.setTotalPrice(BigDecimal.ZERO);
+        cartRepository.save(cart);
+        return mapCart(cart);
     }
 
 }

@@ -41,6 +41,9 @@ public enum ErrorCode {
 
     /// General
     INVALID_REQUEST(9001, "Invalid request", HttpStatus.BAD_REQUEST),
+    /// Location
+    STORE_LOCATION_NOT_FOUND(6002, "Store location not found", HttpStatus.NOT_FOUND),
+
     ;
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;
