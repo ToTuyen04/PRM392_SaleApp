@@ -27,6 +27,10 @@ jwt:
   signerKey: ${SIGNER_KEY}
   valid-duration: 3600
   refreshable-duration: 604800
+  app:
+    server:
+      host: ${SERVER_HOST:192.168.1.52}
+      port: ${SERVER_PORT:8080}
   gemini:
     api:
       url: ${GEMINI_API_URL}
