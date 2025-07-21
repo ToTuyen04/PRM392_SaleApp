@@ -34,22 +34,11 @@ public class CartService {
     private final CartMapper cartMapper;
 
     public CartResponse getActiveCart(int userId) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) {
-            cart = new Cart();
-            cart.setUserID(userRepository.findById(userId)
-                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND)));
-            cart.setStatus("active");
-            cart.setTotalPrice(BigDecimal.ZERO);
-            cart.setCartItems(new LinkedHashSet<>());
-            cartRepository.save(cart);
-        }
-        return mapCart(cart);
-    }
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
 
-    public CartResponse addToCart(int userId, CartItemRequest request) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) {
+        Cart cart;
+        if (cartOpt.isEmpty()) {
+            // Tạo cart mới nếu chưa có
             cart = new Cart();
             cart.setUserID(userRepository.findById(userId)
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND)));
@@ -57,8 +46,31 @@ public class CartService {
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.setCartItems(new LinkedHashSet<>());
             cart = cartRepository.save(cart);
+        } else {
+            cart = cartOpt.get();
         }
 
+        return mapCart(cart);
+    }
+
+    public CartResponse addToCart(int userId, CartItemRequest request) {
+        // Tìm cart active của user, nếu chưa có thì tạo mới
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+
+        Cart cart;
+        if (cartOpt.isEmpty()) {
+            cart = new Cart();
+            cart.setUserID(userRepository.findById(userId)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND)));
+            cart.setStatus("active");
+            cart.setTotalPrice(BigDecimal.ZERO);
+            cart.setCartItems(new LinkedHashSet<>());
+            cart = cartRepository.save(cart); // Lưu lần đầu để lấy cartID
+        } else {
+            cart = cartOpt.get();
+        }
+
+        // Tìm sản phẩm từ productID
         Product product = productRepository.findById(request.getProductID())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -95,6 +107,7 @@ public class CartService {
             cartRepository.save(cart);
         }
 
+        // Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
         Cart updatedCart = cartRepository.findById(cart.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
 
@@ -102,8 +115,10 @@ public class CartService {
     }
 
     public CartResponse updateCartItemQuantity(int userId, CartItemUpdateRequest request) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        Cart cart = cartOpt.get();
 
         CartItem item = cart.getCartItems().stream()
                 .filter(ci -> ci.getId().equals(request.getCartItemID()))
@@ -126,8 +141,10 @@ public class CartService {
     }
 
     public CartResponse removeCartItem(int userId, int cartItemId) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        Cart cart = cartOpt.get();
 
         CartItem item = cart.getCartItems().stream()
                 .filter(ci -> ci.getId().equals(cartItemId))
@@ -172,10 +189,12 @@ public class CartService {
 
     // Method để dọn dẹp cart - gộp các CartItem trùng lặp
     public CartResponse cleanupDuplicateCartItems(int userId) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) {
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) {
             throw new AppException(ErrorCode.CART_NOT_FOUND);
         }
+
+        Cart cart = cartOpt.get();
 
         // Lấy tất cả CartItem trong cart
         Set<CartItem> cartItems = cart.getCartItems();
@@ -230,8 +249,10 @@ public class CartService {
         return mapCart(updatedCart);
     }
     public CartResponse clearCart(int userId) {
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        Cart cart = cartOpt.get();
 
         cartItemRepository.deleteAll(cart.getCartItems());
         cart.getCartItems().clear();

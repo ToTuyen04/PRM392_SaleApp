@@ -11,14 +11,14 @@ import java.util.Optional;
 @Repository
 public interface CartRepository extends JpaRepository<Cart, Integer> {
 
+    // Lấy cart active mới nhất (tránh lỗi multiple results)
+    @EntityGraph(attributePaths = {"cartItems", "cartItems.productID"})
+    Optional<Cart> findFirstByUserID_IdAndStatusOrderByIdDesc(Integer userId, String status);
+
     // Lấy tất cả cart của user
     List<Cart> findByUserID_Id(Integer userId);
 
-    // Lấy cart active (chưa cần fetch cartItems)
-    @EntityGraph(attributePaths = {"cartItems", "cartItems.productID"})
-    Cart findByUserID_IdAndStatus(Integer userId, String status);
-
-    // ✅ Lấy cart theo ID, luôn load cartItems và product
+    // Lấy cart theo ID với cartItems
     @EntityGraph(attributePaths = {"cartItems", "cartItems.productID"})
     Optional<Cart> findById(Integer cartId);
 }

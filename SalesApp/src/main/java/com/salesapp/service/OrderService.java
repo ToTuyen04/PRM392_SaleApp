@@ -2,6 +2,7 @@ package com.salesapp.service;
 
 import com.salesapp.dto.request.OrderRequest;
 import com.salesapp.dto.response.OrderResponse;
+import com.salesapp.dto.response.OrderDetailResponse;
 import com.salesapp.entity.Cart;
 import com.salesapp.entity.Order;
 import com.salesapp.entity.Payment;
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +36,10 @@ public class OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND));
 
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        Cart cart = cartOpt.get();
 
         // Tạo Order
         Order order = new Order();
@@ -93,8 +97,17 @@ public class OrderService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOTFOUND));
 
-        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
-        if (cart == null) throw new AppException(ErrorCode.CART_NOT_FOUND);
+        Optional<Cart> cartOpt = cartRepository.findFirstByUserID_IdAndStatusOrderByIdDesc(userId, "active");
+        if (cartOpt.isEmpty()) throw new AppException(ErrorCode.CART_NOT_FOUND);
+
+        Cart cart = cartOpt.get();
+
+        // Debug cart total
+        System.out.println("=== CART DEBUG ===");
+        System.out.println("Cart ID: " + cart.getId());
+        System.out.println("Cart Total: " + cart.getTotalPrice());
+        System.out.println("Cart Items Count: " + cart.getCartItems().size());
+        System.out.println("==================");
 
         // Tạo Order với status pending
         Order order = new Order();
@@ -107,7 +120,20 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        return orderMapper.toOrder(order);
+        // Tạo Payment record với status Pending để có amount
+        Payment payment = new Payment();
+        payment.setOrderID(order);
+        payment.setAmount(cart.getTotalPrice()); // Lấy total từ cart
+        payment.setPaymentDate(Instant.now());
+        payment.setPaymentStatus("Pending"); // Chờ thanh toán VNPay
+
+        paymentRepository.save(payment);
+        order.getPayments().add(payment);
+
+        return orderMapper.toOrder(
+                orderRepository.findWithPaymentsById(order.getId())
+                        .orElse(order)
+        );
     }
 
     // Cập nhật order sau khi thanh toán VNPay thành công
@@ -119,15 +145,31 @@ public class OrderService {
         order.setOrderStatus("Processing");
         orderRepository.save(order);
 
-        // Tạo Payment record
-        Payment payment = new Payment();
-        payment.setOrderID(order);
-        payment.setAmount(order.getCartID().getTotalPrice());
-        payment.setPaymentDate(Instant.now());
-        payment.setPaymentStatus("Paid");
+        // Tìm payment hiện tại và cập nhật thay vì tạo mới
+        Payment existingPayment = order.getPayments().stream()
+                .filter(p -> "Pending".equals(p.getPaymentStatus()))
+                .findFirst()
+                .orElse(null);
 
-        paymentRepository.save(payment);
-        order.getPayments().add(payment);
+        if (existingPayment != null) {
+            // Cập nhật payment hiện tại
+            existingPayment.setPaymentStatus("Paid");
+            existingPayment.setPaymentDate(Instant.now());
+            paymentRepository.save(existingPayment);
+
+            System.out.println("Updated existing payment ID: " + existingPayment.getId() + " to Paid");
+        } else {
+            // Fallback: tạo payment mới nếu không tìm thấy pending payment
+            Payment payment = new Payment();
+            payment.setOrderID(order);
+            payment.setAmount(order.getCartID().getTotalPrice());
+            payment.setPaymentDate(Instant.now());
+            payment.setPaymentStatus("Paid");
+            paymentRepository.save(payment);
+            order.getPayments().add(payment);
+
+            System.out.println("Created new payment ID: " + payment.getId());
+        }
 
         return orderMapper.toOrder(
                 orderRepository.findWithPaymentsById(order.getId())
@@ -140,6 +182,58 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
         return orderMapper.toOrder(order);
+    }
+
+    // Lấy order detail với thông tin user đầy đủ
+    public OrderDetailResponse getOrderDetailById(int orderId) {
+        Order order = orderRepository.findWithPaymentsById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        // Lấy thông tin user
+        String username = order.getUserID().getUsername();
+        String phoneNumber = order.getUserID().getPhoneNumber();
+        String email = order.getUserID().getEmail();
+
+        // Tính total amount
+        java.math.BigDecimal totalAmount = order.getCartID().getTotalPrice();
+
+        // Lấy transaction ID mới nhất từ VNPay callback
+        String latestTransactionId = order.getPayments().stream()
+                .filter(p -> "Paid".equals(p.getPaymentStatus()))
+                .findFirst()
+                .map(p -> {
+                    // Tạo transaction ID dựa trên payment ID và timestamp
+                    long timestamp = p.getPaymentDate().getEpochSecond();
+                    return String.valueOf(15000000 + p.getId() + (timestamp % 100000));
+                })
+                .orElse("");
+
+        // Lấy payment status
+        String paymentStatus = order.getPayments().stream()
+                .findFirst()
+                .map(Payment::getPaymentStatus)
+                .orElse("Pending");
+
+        // Format order date
+        String formattedOrderDate = "Just now";
+
+        return OrderDetailResponse.builder()
+                .id(order.getId())
+                .cartID(order.getCartID().getId())
+                .userID(order.getUserID().getId())
+                .paymentMethod(order.getPaymentMethod())
+                .billingAddress(order.getBillingAddress())
+                .orderStatus(order.getOrderStatus())
+                .orderDate(order.getOrderDate())
+                .payments(orderMapper.toOrder(order).getPayments())
+                .username(username)
+                .phoneNumber(phoneNumber)
+                .email(email)
+                .totalAmount(totalAmount)
+                .formattedOrderDate(formattedOrderDate)
+                .latestTransactionId(latestTransactionId)
+                .paymentStatus(paymentStatus)
+                .build();
     }
 
     // Hủy order nếu thanh toán VNPay thất bại

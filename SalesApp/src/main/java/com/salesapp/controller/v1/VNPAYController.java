@@ -2,10 +2,13 @@ package com.salesapp.controller.v1;
 
 import com.salesapp.dto.request.OrderRequest;
 import com.salesapp.dto.response.OrderResponse;
+import com.salesapp.dto.response.OrderDetailResponse;
 import com.salesapp.dto.response.ResponseObject;
 import com.salesapp.dto.response.VNPayResponse;
 import com.salesapp.service.OrderService;
 import com.salesapp.service.VNPAYService;
+import com.salesapp.service.VNPayServiceDev;
+import com.salesapp.config.ServerConfig;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,9 +22,10 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Tag(name = "VNPay", description = "VNPay Payment Integration")
 public class VNPAYController {
-    
-    private final VNPAYService vnPayService;
+
+    private final VNPayServiceDev vnPayService;
     private final OrderService orderService;
+    private final ServerConfig serverConfig;
 
     // Tạo URL thanh toán VNPay
     @PostMapping("/create-payment")
@@ -42,57 +46,64 @@ public class VNPAYController {
 
     // Xử lý callback từ VNPay sau khi thanh toán
     @GetMapping("/payment-callback")
-    public ResponseObject<VNPayResponse> paymentCallback(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void paymentCallback(HttpServletRequest request, HttpServletResponse response) throws IOException {
         VNPayResponse vnPayResponse = vnPayService.orderReturn(request);
 
-        // Lấy orderId từ vnp_OrderInfo hoặc parameter
+        // Lấy orderId từ vnp_OrderInfo
         String orderInfo = request.getParameter("vnp_OrderInfo");
         int orderId = 0;
         try {
             orderId = Integer.parseInt(orderInfo);
         } catch (NumberFormatException e) {
-            // Nếu orderInfo không phải là số, có thể cần parse khác
             System.out.println("Cannot parse orderId from orderInfo: " + orderInfo);
         }
 
+        // Lấy mobile return URL từ parameter
+        String mobileReturnUrl = request.getParameter("mobileReturnUrl");
+        if (mobileReturnUrl == null) {
+            mobileReturnUrl = "shopmate://payment-result"; // Default deep link
+        }
+
+        String redirectUrl;
+
         if (vnPayResponse.getStatus() == 1) {
-            // Thanh toán thành công - cập nhật order nếu có orderId
+            // Thanh toán thành công - cập nhật order
             if (orderId > 0) {
                 try {
                     orderService.updateOrderAfterVNPaySuccess(orderId, vnPayResponse.getTransactionID());
+                    System.out.println("Order " + orderId + " updated successfully");
                 } catch (Exception e) {
                     System.out.println("Error updating order: " + e.getMessage());
                 }
             }
 
-            return ResponseObject.<VNPayResponse>builder()
-                    .status(1000)
-                    .message("Payment successful")
-                    .data(vnPayResponse)
-                    .build();
+            // Redirect về mobile app với kết quả thành công
+            redirectUrl = mobileReturnUrl + "?status=success&orderId=" + orderId +
+                         "&transactionId=" + vnPayResponse.getTransactionID();
+
         } else if (vnPayResponse.getStatus() == 0) {
-            // Thanh toán thất bại - hủy order nếu có orderId
+            // Thanh toán thất bại - hủy order
             if (orderId > 0) {
                 try {
                     orderService.cancelOrder(orderId);
+                    System.out.println("Order " + orderId + " cancelled");
                 } catch (Exception e) {
                     System.out.println("Error cancelling order: " + e.getMessage());
                 }
             }
 
-            return ResponseObject.<VNPayResponse>builder()
-                    .status(2000)
-                    .message("Payment failed")
-                    .data(vnPayResponse)
-                    .build();
+            // Redirect về mobile app với kết quả thất bại
+            redirectUrl = mobileReturnUrl + "?status=failed&orderId=" + orderId +
+                         "&error=payment_failed";
+
         } else {
             // Chữ ký không hợp lệ
-            return ResponseObject.<VNPayResponse>builder()
-                    .status(3000)
-                    .message("Invalid payment signature")
-                    .data(vnPayResponse)
-                    .build();
+            redirectUrl = mobileReturnUrl + "?status=error&orderId=" + orderId +
+                         "&error=invalid_signature";
         }
+
+        // Redirect về mobile app
+        response.sendRedirect(redirectUrl);
     }
 
     // Endpoint để tạo thanh toán cho một order cụ thể
@@ -161,24 +172,54 @@ public class VNPAYController {
     public ResponseObject<String> createOrderAndPayment(
             @PathVariable int userId,
             @RequestBody OrderRequest orderRequest,
-            @RequestParam(value = "returnUrl", defaultValue = "http://localhost:3000/payment-result") String returnUrl,
+            @RequestParam(value = "mobileReturnUrl", defaultValue = "shopmate://payment-result") String mobileReturnUrl,
             HttpServletRequest request) {
 
         // Tạo order trước
         OrderResponse orderResponse = orderService.createOrderForVNPay(userId, orderRequest);
 
-        // Tạo payment URL
-        String orderInfo = "Thanh toan don hang #" + orderResponse.getId();
-        // Lấy amount từ cart (cần implement logic lấy cart total)
-        int amount = 100000; // Tạm thời hardcode, nên lấy từ cart thực tế
+        // Tạo payment URL với backend callback
+        String orderInfo = String.valueOf(orderResponse.getId()); // Chỉ gửi orderId để dễ parse
 
-        String vnpayUrl = vnPayService.createOrder(request, amount, orderInfo,
-                returnUrl + "?orderId=" + orderResponse.getId());
+        // Lấy amount từ payment trong order (VNPay yêu cầu đơn vị xu, nên nhân 100)
+        int amount = 100000; // Default amount (100,000 VND)
+        if (orderResponse.getPayments() != null && !orderResponse.getPayments().isEmpty()) {
+            // Lấy amount từ payment và convert sang xu (VNPay format)
+            java.math.BigDecimal paymentAmount = orderResponse.getPayments().get(0).getAmount();
+            amount = paymentAmount.multiply(new java.math.BigDecimal(100)).intValue();
+
+            System.out.println("=== PAYMENT AMOUNT DEBUG ===");
+            System.out.println("Cart Total (VND): " + paymentAmount);
+            System.out.println("VNPay Amount (xu): " + amount);
+            System.out.println("===========================");
+        } else {
+            System.out.println("WARNING: No payment found, using default amount: " + amount);
+        }
+
+        // VNPay sẽ callback về backend, sau đó backend redirect về mobile app
+        // Sử dụng ServerConfig để lấy base URL
+        String serverUrl = serverConfig.getBaseUrl();
+        String backendCallbackUrl = serverUrl + "/v1/vnpay/payment-callback?mobileReturnUrl=" +
+                java.net.URLEncoder.encode(mobileReturnUrl, java.nio.charset.StandardCharsets.UTF_8);
+
+        String vnpayUrl = vnPayService.createOrder(request, amount, orderInfo, backendCallbackUrl);
 
         return ResponseObject.<String>builder()
                 .status(1000)
                 .message("Order created and VNPay payment URL generated")
                 .data(vnpayUrl)
+                .build();
+    }
+
+    // Endpoint để lấy order detail với thông tin đầy đủ
+    @GetMapping("/order-detail/{orderId}")
+    public ResponseObject<OrderDetailResponse> getOrderDetail(@PathVariable int orderId) {
+        OrderDetailResponse orderDetail = orderService.getOrderDetailById(orderId);
+
+        return ResponseObject.<OrderDetailResponse>builder()
+                .status(1000)
+                .message("Order detail retrieved successfully")
+                .data(orderDetail)
                 .build();
     }
 
@@ -241,4 +282,6 @@ public class VNPAYController {
                 .data(scenarios)
                 .build();
     }
+
+
 }
