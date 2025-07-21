@@ -38,6 +38,9 @@ public enum ErrorCode {
 
     /// Payment
     PAYMENT_INVALID_SIGN(6001, "Payment signature is invalid", HttpStatus.BAD_REQUEST),
+
+    /// General
+    INVALID_REQUEST(9001, "Invalid request", HttpStatus.BAD_REQUEST),
     ;
     ErrorCode(int code, String message, HttpStatusCode statusCode){
         this.code = code;
