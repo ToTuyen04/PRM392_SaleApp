@@ -28,10 +28,13 @@ public class ServerConfig {
     
     public String getBaseUrl() {
         // ========== SERVER URL CONFIGURATION ==========
+        // 🔧 NGROK: Uncomment for VNPay testing (replace with your ngrok URL)
+        // return "https://your-ngrok-url.ngrok.io";
+
         // 🔧 DEPLOYMENT: Uncomment for production deployment
         return "https://saleapp-mspd.onrender.com";
 
         // 🔧 LOCAL: Uncomment for local development
-        //return "http://" + host + ":" + port;
+        // return "http://" + host + ":" + port;
     }
 }
