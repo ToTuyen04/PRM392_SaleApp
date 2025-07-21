@@ -27,6 +27,11 @@ public class ServerConfig {
     }
     
     public String getBaseUrl() {
-        return "http://" + host + ":" + port;
+        // ========== SERVER URL CONFIGURATION ==========
+        // 🔧 DEPLOYMENT: Uncomment for production deployment
+        return "https://saleapp-mspd.onrender.com";
+
+        // 🔧 LOCAL: Uncomment for local development
+        //return "http://" + host + ":" + port;
     }
 }

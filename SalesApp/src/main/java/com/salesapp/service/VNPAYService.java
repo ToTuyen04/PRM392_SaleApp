@@ -16,7 +16,7 @@ import java.util.*;
 @Service
 public class VNPAYService {
 
-    public String createOrder(HttpServletRequest request, int amount, String orderInfo, String urlReturn) {
+    public String createOrder(HttpServletRequest request, long amount, String orderInfo, String urlReturn) {
         String vnp_Version = "2.1.0";
         String vnp_Command = "pay";
         String vnp_TxnRef = VNPAYConfig.getRandomNumber(8);
@@ -28,7 +28,7 @@ public class VNPAYService {
         vnp_Params.put("vnp_Version", vnp_Version);
         vnp_Params.put("vnp_Command", vnp_Command);
         vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
-        vnp_Params.put("vnp_Amount", String.valueOf(amount * 100));
+        vnp_Params.put("vnp_Amount", String.valueOf(amount)); // Amount đã được nhân 100 ở controller
         vnp_Params.put("vnp_CurrCode", "VND");
 
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);

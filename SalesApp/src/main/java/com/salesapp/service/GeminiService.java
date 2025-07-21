@@ -13,10 +13,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GeminiService {
 
-    @Value("${gemini.api.url}")
+    @Value("${app.gemini.api.url}")
     private String geminiApiUrl;
 
-    @Value("${gemini.api.key}")
+    @Value("${app.gemini.api.key}")
     private String geminiApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();

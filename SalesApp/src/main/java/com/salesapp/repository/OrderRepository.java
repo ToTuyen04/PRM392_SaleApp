@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface OrderRepository extends JpaRepository<Order, Integer> {
 
-    List<Order> findByUserID_Id(int userId);
+    List<Order> findByUserID_IdOrderByIdDesc(int userId);
 
     @EntityGraph(attributePaths = {"payments"})
     Optional<Order> findWithPaymentsById(Integer id);

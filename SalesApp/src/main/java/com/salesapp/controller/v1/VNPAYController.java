@@ -30,7 +30,7 @@ public class VNPAYController {
     // Tạo URL thanh toán VNPay
     @PostMapping("/create-payment")
     public ResponseObject<String> createPayment(
-            @RequestParam("amount") int totalAmount,
+            @RequestParam("amount") long totalAmount,
             @RequestParam("orderInfo") String orderInfo,
             @RequestParam(value = "returnUrl", defaultValue = "http://localhost:3000/payment-result") String returnUrl,
             HttpServletRequest request) {
@@ -117,10 +117,10 @@ public class VNPAYController {
         var orderResponse = orderService.getOrderById(orderId);
         String orderInfo = String.valueOf(orderId); // Chỉ gửi orderId để dễ parse
 
-        // Lấy amount từ cart của order (cần convert BigDecimal to int)
-        int amount = orderResponse.getPayments().isEmpty() ?
+        // Lấy amount từ cart của order (cần convert BigDecimal to long)
+        long amount = orderResponse.getPayments().isEmpty() ?
             100000 : // Default nếu chưa có payment
-            orderResponse.getPayments().get(0).getAmount().intValue();
+            orderResponse.getPayments().get(0).getAmount().longValue();
 
         String vnpayUrl = vnPayService.createOrder(request, amount, orderInfo, returnUrl);
 
@@ -182,11 +182,11 @@ public class VNPAYController {
         String orderInfo = String.valueOf(orderResponse.getId()); // Chỉ gửi orderId để dễ parse
 
         // Lấy amount từ payment trong order (VNPay yêu cầu đơn vị xu, nên nhân 100)
-        int amount = 100000; // Default amount (100,000 VND)
+        long amount = 100000; // Default amount (100,000 VND)
         if (orderResponse.getPayments() != null && !orderResponse.getPayments().isEmpty()) {
             // Lấy amount từ payment và convert sang xu (VNPay format)
             java.math.BigDecimal paymentAmount = orderResponse.getPayments().get(0).getAmount();
-            amount = paymentAmount.multiply(new java.math.BigDecimal(100)).intValue();
+            amount = paymentAmount.multiply(new java.math.BigDecimal(100)).longValue();
 
             System.out.println("=== PAYMENT AMOUNT DEBUG ===");
             System.out.println("Cart Total (VND): " + paymentAmount);

@@ -20,7 +20,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class VNPayServiceDev {
 
-    public String createOrder(HttpServletRequest request, int amount, String orderInfo, String returnUrl) {
+    public String createOrder(HttpServletRequest request, long amount, String orderInfo, String returnUrl) {
         String vnp_Version = "2.1.0";
         String vnp_Command = "pay";
         String vnp_TxnRef = VNPAYConfig.getRandomNumber(8);

@@ -9,6 +9,7 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
@@ -27,10 +28,10 @@ jwt:
   signerKey: ${SIGNER_KEY}
   valid-duration: 3600
   refreshable-duration: 604800
-  app:
-    server:
-      host: ${SERVER_HOST:192.168.1.52}
-      port: ${SERVER_PORT:8080}
+app:
+  server:
+    host: 192.168.1.52
+    port: 8080
   gemini:
     api:
       url: ${GEMINI_API_URL}
