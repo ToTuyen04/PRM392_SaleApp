@@ -51,7 +51,7 @@ public class VNPayServiceDev {
         String vnp_CreateDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
 
-        cld.add(Calendar.MINUTE, 15);
+        cld.add(Calendar.MINUTE, 30); // Tăng timeout lên 30 phút cho deployment
         String vnp_ExpireDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
 
@@ -84,6 +84,15 @@ public class VNPayServiceDev {
         String vnp_SecureHash = VNPAYConfig.hmacSHA512(VNPAYConfig.vnp_HashSecret, hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
         String paymentUrl = VNPAYConfig.vnp_PayUrl + "?" + queryUrl;
+
+        // Debug logs for deployment
+        System.out.println("=== VNPay URL Debug ===");
+        System.out.println("Amount: " + amount);
+        System.out.println("Order Info: " + orderInfo);
+        System.out.println("Return URL: " + returnUrl);
+        System.out.println("Payment URL: " + paymentUrl);
+        System.out.println("======================");
+
         return paymentUrl;
     }
 
