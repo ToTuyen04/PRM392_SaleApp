@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.math.BigDecimal;
 import java.util.LinkedHashSet;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -61,20 +64,38 @@ public class CartService {
         Product product = productRepository.findById(request.getProductID())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Tạo mới CartItem
-        CartItem item = new CartItem();
-        item.setCartID(cart);
-        item.setProductID(product);
-        item.setQuantity(request.getQuantity());
-        item.setPrice(product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+        // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+        CartItem existingItem = cartItemRepository.findByCartID_IdAndProductID_Id(cart.getId(), request.getProductID());
 
-        // Lưu CartItem trước
-        cartItemRepository.save(item);
-        cart.getCartItems().add(item);
+        if (existingItem != null) {
+            // Nếu sản phẩm đã có, cập nhật quantity và price
+            int newQuantity = existingItem.getQuantity() + request.getQuantity();
+            BigDecimal oldPrice = existingItem.getPrice();
+            BigDecimal newPrice = product.getPrice().multiply(BigDecimal.valueOf(newQuantity));
 
-        // Cập nhật lại tổng tiền cho cart
-        cart.setTotalPrice(cart.getTotalPrice().add(item.getPrice()));
-        cartRepository.save(cart);
+            existingItem.setQuantity(newQuantity);
+            existingItem.setPrice(newPrice);
+            cartItemRepository.save(existingItem);
+
+            // Cập nhật tổng tiền cart (trừ giá cũ, cộng giá mới)
+            cart.setTotalPrice(cart.getTotalPrice().subtract(oldPrice).add(newPrice));
+            cartRepository.save(cart);
+        } else {
+            // Nếu sản phẩm chưa có, tạo mới CartItem
+            CartItem item = new CartItem();
+            item.setCartID(cart);
+            item.setProductID(product);
+            item.setQuantity(request.getQuantity());
+            item.setPrice(product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+
+            // Lưu CartItem trước
+            cartItemRepository.save(item);
+            cart.getCartItems().add(item);
+
+            // Cập nhật lại tổng tiền cho cart
+            cart.setTotalPrice(cart.getTotalPrice().add(item.getPrice()));
+            cartRepository.save(cart);
+        }
 
         // Quan trọng: Tải lại cart từ DB để đảm bảo có đầy đủ cartItems
         Cart updatedCart = cartRepository.findById(cart.getId())
@@ -102,7 +123,11 @@ public class CartService {
         recalculateTotalPrice(cart);
         cartRepository.save(cart);
 
-        return mapCart(cart);
+        // Tải lại cart từ DB để đảm bảo có dữ liệu mới nhất
+        Cart updatedCart = cartRepository.findById(cart.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+
+        return mapCart(updatedCart);
     }
 
     public CartResponse removeCartItem(int userId, int cartItemId) {
@@ -120,7 +145,11 @@ public class CartService {
         recalculateTotalPrice(cart);
         cartRepository.save(cart);
 
-        return mapCart(cart);
+        // Tải lại cart từ DB để đảm bảo có dữ liệu mới nhất
+        Cart updatedCart = cartRepository.findById(cart.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+
+        return mapCart(updatedCart);
     }
 
     // Tính lại total price từ các cartItem
@@ -132,15 +161,78 @@ public class CartService {
         cart.setTotalPrice(total);
     }
 
-    // Đảm bảo không có cartItem null trong response
+    // Đảm bảo không có cartItem null trong response và sắp xếp theo cartItemId
     private CartResponse mapCart(Cart cart) {
         CartResponse res = cartMapper.toDto(cart);
-        res.setCartItems(cartMapper.toCartItems(
-                cart.getCartItems().stream()
-                        .filter(item -> item != null && item.getProductID() != null)
-                        .toList()
-        ));
+
+        // Sắp xếp cart items theo ID tăng dần để đảm bảo thứ tự nhất quán
+        List<CartItem> sortedItems = cart.getCartItems().stream()
+                .filter(item -> item != null && item.getProductID() != null)
+                .sorted(Comparator.comparing(CartItem::getId)) // Sắp xếp theo cartItemId tăng dần
+                .toList();
+
+        res.setCartItems(cartMapper.toCartItems(sortedItems));
         return res;
+    }
+
+    // Method để dọn dẹp cart - gộp các CartItem trùng lặp
+    public CartResponse cleanupDuplicateCartItems(int userId) {
+        Cart cart = cartRepository.findByUserID_IdAndStatus(userId, "active");
+        if (cart == null) {
+            throw new AppException(ErrorCode.CART_NOT_FOUND);
+        }
+
+        // Lấy tất cả CartItem trong cart
+        Set<CartItem> cartItems = cart.getCartItems();
+        Map<Integer, CartItem> productMap = new HashMap<>();
+        List<CartItem> itemsToDelete = new ArrayList<>();
+
+        // Gộp các item trùng lặp
+        for (CartItem item : cartItems) {
+            Integer productId = item.getProductID().getId();
+
+            if (productMap.containsKey(productId)) {
+                // Nếu đã có sản phẩm này, cộng dồn quantity
+                CartItem existingItem = productMap.get(productId);
+                int newQuantity = existingItem.getQuantity() + item.getQuantity();
+                BigDecimal newPrice = existingItem.getProductID().getPrice()
+                        .multiply(BigDecimal.valueOf(newQuantity));
+
+                existingItem.setQuantity(newQuantity);
+                existingItem.setPrice(newPrice);
+
+                // Đánh dấu item trùng lặp để xóa
+                itemsToDelete.add(item);
+            } else {
+                // Nếu chưa có, thêm vào map
+                productMap.put(productId, item);
+            }
+        }
+
+        // Xóa các item trùng lặp
+        for (CartItem itemToDelete : itemsToDelete) {
+            cartItemRepository.delete(itemToDelete);
+            cart.getCartItems().remove(itemToDelete);
+        }
+
+        // Lưu các item đã được cập nhật
+        for (CartItem item : productMap.values()) {
+            cartItemRepository.save(item);
+        }
+
+        // Tính lại tổng tiền
+        BigDecimal newTotalPrice = productMap.values().stream()
+                .map(CartItem::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        cart.setTotalPrice(newTotalPrice);
+        cartRepository.save(cart);
+
+        // Tải lại cart từ DB
+        Cart updatedCart = cartRepository.findById(cart.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+
+        return mapCart(updatedCart);
     }
 
 }

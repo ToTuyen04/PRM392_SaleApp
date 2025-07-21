@@ -11,6 +11,8 @@ public class CartItemResponse {
     private Integer id;
     private Integer productID;
     private String productName;
+    private String productImage;
     private Integer quantity;
-    private BigDecimal price;
+    private BigDecimal price; // Giá gốc của 1 sản phẩm
+    private BigDecimal subtotal; // Tổng tiền của cart item (price × quantity)
 }

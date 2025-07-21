@@ -31,6 +31,7 @@ public class Cart {
 
     @OneToMany(mappedBy = "cartID", fetch = FetchType.LAZY,
             cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC") // Sắp xếp theo cartItemId tăng dần
     private Set<CartItem> cartItems = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "cartID", fetch = FetchType.LAZY)

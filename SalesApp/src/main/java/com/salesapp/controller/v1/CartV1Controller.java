@@ -59,4 +59,14 @@ public class CartV1Controller {
                 .data(cart)
                 .build();
     }
+
+    @PostMapping("/{userId}/cleanup")
+    public ResponseObject<CartResponse> cleanupCart(@PathVariable int userId) {
+        CartResponse cart = cartService.cleanupDuplicateCartItems(userId);
+        return ResponseObject.<CartResponse>builder()
+                .status(1000)
+                .message("Cart cleaned up successfully - duplicate items merged")
+                .data(cart)
+                .build();
+    }
 }
