@@ -1,5 +1,6 @@
 package com.salesapp.service;
 
+import com.salesapp.config.TimeZoneConfig;
 import com.salesapp.config.VNPAYConfig;
 import com.salesapp.dto.response.VNPayResponse;
 import com.salesapp.exception.AppException;
@@ -19,6 +20,8 @@ import java.util.*;
 @Primary // This will override the original VNPayService
 @RequiredArgsConstructor
 public class VNPayServiceDev {
+
+    private final TimeZoneConfig timeZoneConfig;
 
     public String createOrder(HttpServletRequest request, long amount, String orderInfo, String returnUrl) {
         String vnp_Version = "2.1.0";
@@ -46,14 +49,28 @@ public class VNPayServiceDev {
         vnp_Params.put("vnp_ReturnUrl", returnUrl);
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        // ========== TIMEZONE CONFIGURATION FOR DEPLOYMENT ==========
+        // Sử dụng TimeZoneConfig để đảm bảo timezone consistency
+        TimeZoneConfig.debugTimezoneInfo("VNPay CreateOrder");
+        
+        TimeZone vietnamTimeZone = timeZoneConfig.vietnamTimeZone();
+        Calendar cld = Calendar.getInstance(vietnamTimeZone);
+        SimpleDateFormat formatter = timeZoneConfig.vnpayDateFormatter();
+        
         String vnp_CreateDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
 
-        cld.add(Calendar.MINUTE, 30); // Tăng timeout lên 30 phút cho deployment
+        // Sử dụng timeout từ config
+        cld.add(Calendar.MINUTE, TimeZoneConfig.VNPAY_TIMEOUT_MINUTES);
         String vnp_ExpireDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
+        
+        // Debug thông tin thời gian cho deployment
+        System.out.println("=== VNPAY PAYMENT TIME DEBUG ===");
+        System.out.println("Create Date: " + vnp_CreateDate);
+        System.out.println("Expire Date: " + vnp_ExpireDate);
+        System.out.println("Timeout Minutes: " + TimeZoneConfig.VNPAY_TIMEOUT_MINUTES);
+        System.out.println("===============================");
 
         List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
         Collections.sort(fieldNames);
