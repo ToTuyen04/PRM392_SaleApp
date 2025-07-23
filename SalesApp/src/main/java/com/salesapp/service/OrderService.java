@@ -1,9 +1,11 @@
 package com.salesapp.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesapp.dto.CartItemSnapshot;
 import com.salesapp.dto.request.OrderRequest;
+import com.salesapp.dto.response.CartItemResponse;
 import com.salesapp.dto.response.OrderResponse;
 import com.salesapp.dto.response.OrderDetailResponse;
 import com.salesapp.entity.Cart;
@@ -24,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -288,8 +291,43 @@ public class OrderService {
         String phoneNumber = order.getUserID().getPhoneNumber();
         String email = order.getUserID().getEmail();
 
-        // Tính total amount
-        java.math.BigDecimal totalAmount = order.getCartID().getTotalPrice();
+        // Parse cartItemsSnapshot to get cart items
+        List<CartItemResponse> cartItems = null;
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+        
+        try {
+            if (order.getCartItemsSnapshot() != null && !order.getCartItemsSnapshot().isEmpty()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                TypeReference<List<CartItemSnapshot>> typeRef = new TypeReference<List<CartItemSnapshot>>() {};
+                List<CartItemSnapshot> snapshots = objectMapper.readValue(order.getCartItemsSnapshot(), typeRef);
+                
+                // Convert CartItemSnapshot to CartItemResponse
+                cartItems = snapshots.stream().map(snapshot -> {
+                    CartItemResponse response = new CartItemResponse();
+                    response.setId(snapshot.getCartItemId());
+                    response.setProductID(snapshot.getProductId());
+                    response.setProductName(snapshot.getProductName());
+                    response.setProductImage(snapshot.getProductImage());
+                    response.setQuantity(snapshot.getQuantity());
+                    response.setPrice(snapshot.getPrice());
+                    response.setSubtotal(snapshot.getSubtotal());
+                    return response;
+                }).collect(Collectors.toList());
+                
+                // Tính total amount từ cart items snapshot thay vì từ cart hiện tại
+                if (cartItems != null) {
+                    totalAmount = cartItems.stream()
+                        .map(CartItemResponse::getSubtotal)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing cartItemsSnapshot: " + e.getMessage());
+            e.printStackTrace();
+            cartItems = new java.util.ArrayList<>();
+            // Fallback to cart total if snapshot parsing fails
+            totalAmount = order.getCartID().getTotalPrice();
+        }
 
         // Lấy transaction ID mới nhất từ VNPay callback
         String latestTransactionId = order.getPayments().stream()
@@ -323,6 +361,7 @@ public class OrderService {
                 .username(username)
                 .phoneNumber(phoneNumber)
                 .email(email)
+                .cartItems(cartItems)
                 .totalAmount(totalAmount)
                 .formattedOrderDate(formattedOrderDate)
                 .latestTransactionId(latestTransactionId)

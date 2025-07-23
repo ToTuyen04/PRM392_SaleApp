@@ -29,6 +29,9 @@ public class OrderDetailResponse {
     private String phoneNumber;
     private String email;
     
+    // Cart items (products in this order)
+    private List<CartItemResponse> cartItems;
+    
     // Calculated fields
     private BigDecimal totalAmount;
     private String formattedOrderDate;
