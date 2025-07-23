@@ -40,6 +40,10 @@ public class Order {
     @Column(name = "OrderDate", nullable = false)
     private Instant orderDate;
 
+    // Snapshot của cart items tại thời điểm tạo order (JSON format)
+    @Column(name = "CartItemsSnapshot", columnDefinition = "TEXT")
+    private String cartItemsSnapshot;
+
     @OneToMany(mappedBy = "orderID")
     private Set<Payment> payments = new LinkedHashSet<>();
 
