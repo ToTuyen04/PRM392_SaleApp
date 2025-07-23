@@ -19,5 +19,8 @@ public class OrderResponse {
 
     // Danh sách payment nếu cần hiển thị ra
     private List<PaymentResponse> payments;
+    
+    // Thêm danh sách sản phẩm trong order
+    private List<CartItemResponse> cartItems;
 
 }

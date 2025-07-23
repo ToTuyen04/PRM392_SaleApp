@@ -88,7 +88,7 @@ public class OrderService {
 
 
     public List<OrderResponse> getOrdersByUser(int userId) {
-        List<Order> orders = orderRepository.findByUserID_IdOrderByIdDesc(userId);
+        List<Order> orders = orderRepository.findWithCartItemsByUserID_IdOrderByIdDesc(userId);
         return orderMapper.toOrders(orders);
     }
 

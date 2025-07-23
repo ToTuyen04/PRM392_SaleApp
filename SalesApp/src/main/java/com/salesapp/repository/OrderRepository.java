@@ -14,4 +14,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
 
     @EntityGraph(attributePaths = {"payments"})
     Optional<Order> findWithPaymentsById(Integer id);
+    
+    @EntityGraph(attributePaths = {"cartID.cartItems.productID", "payments"})
+    List<Order> findWithCartItemsByUserID_IdOrderByIdDesc(int userId);
 }
