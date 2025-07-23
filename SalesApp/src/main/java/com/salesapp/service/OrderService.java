@@ -92,6 +92,12 @@ public class OrderService {
         return orderMapper.toOrders(orders);
     }
 
+    public OrderResponse getOrderById(int orderId) {
+        Order order = orderRepository.findWithCartItemsById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        return orderMapper.toOrder(order);
+    }
+
     // Tạo order cho VNPay (chưa thanh toán)
     public OrderResponse createOrderForVNPay(int userId, OrderRequest request) {
         User user = userRepository.findById(userId)
@@ -177,12 +183,7 @@ public class OrderService {
         );
     }
 
-    // Lấy order theo ID
-    public OrderResponse getOrderById(int orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-        return orderMapper.toOrder(order);
-    }
+
 
     // Lấy order detail với thông tin user đầy đủ
     public OrderDetailResponse getOrderDetailById(int orderId) {
