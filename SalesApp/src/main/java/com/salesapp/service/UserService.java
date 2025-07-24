@@ -48,8 +48,10 @@ public class UserService {
             throw new AppException(ErrorCode.PHONE_EXIST);
         }
         User u = userMapper.toUser(request);
-        //mã hóa password người dùng
-        u.setPasswordHash(passwordEncoder.encode(request.getPasswordHash()));
+        //mã hóa password người dùng - chỉ hash 1 lần từ plain text
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
+        u.setPasswordHash(encodedPassword);
         if(isRegister)
             u.setRole(RoleEnum.CUSTOMER);
         userRepository.save(u);

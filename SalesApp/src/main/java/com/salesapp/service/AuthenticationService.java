@@ -60,7 +60,11 @@ public class AuthenticationService {
         User u = userRepository.findByEmail(request.getEmail()).orElseThrow(
                 () -> new AppException(ErrorCode.USER_NOTFOUND)
         );
+        
+        // Debug logging
+
         boolean authenticated = passwordEncoder.matches(request.getPassword(), u.getPasswordHash());
+
 //        boolean authenticated = request.getPassword().equals(u.getPasswordHash());
         if(!authenticated) throw new AppException(ErrorCode.INCORECT_PASSWORD);
         var token = generateToken(u);
