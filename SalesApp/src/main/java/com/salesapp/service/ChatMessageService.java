@@ -3,7 +3,9 @@ package com.salesapp.service;
 import com.salesapp.dto.request.ChatMessageRequest;
 import com.salesapp.dto.response.ChatMessageResponse;
 import com.salesapp.entity.ChatMessage;
+import com.salesapp.entity.Gemini;
 import com.salesapp.entity.User;
+import com.salesapp.enums.RoleEnum;
 import com.salesapp.mapper.ChatMessageMapper;
 import com.salesapp.repository.ChatMessageRepository;
 import com.salesapp.repository.UserRepository;
@@ -12,7 +14,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,42 +51,78 @@ public class ChatMessageService {
 
         // 🔁 Nếu gửi tới AI → phản hồi tự động
         if (receiver.getId().equals(AI_USER_ID)) {
-            String aiReply = geminiService.getResponseFromAI(request.getMessage());
-
-            User aiUser = receiver;
+            Gemini aiReply = geminiService.getResponseFromAI(request.getMessage());
 
             ChatMessage aiMessage = new ChatMessage();
-            aiMessage.setUserID(aiUser);                  // người gửi là AI
-            aiMessage.setReceiver(sender);                // gửi ngược về cho user
-            aiMessage.setMessage(aiReply);
+            aiMessage.setUserID(receiver);        // AI gửi
+            aiMessage.setReceiver(sender);        // Gửi lại cho user
+            aiMessage.setMessage(aiReply.getReply());
             aiMessage.setSentAt(Instant.now());
             aiMessage.setFromAI(true);
-            aiMessage.setForwardedToHuman(false);
+            aiMessage.setForwardedToHuman(aiReply.isNeedHuman());
 
             ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
 
-            // Gửi về client qua WebSocket
+            // Gửi lại cho user
             messagingTemplate.convertAndSendToUser(
-                    String.valueOf(sender.getId()),
-                    "/queue/messages",
-                    chatMessageMapper.toResponse(savedAiMessage)
+                    String.valueOf(sender.getId()), "/queue/messages", chatMessageMapper.toResponse(savedAiMessage)
             );
+
+            // 🔁 Nếu cần chuyển tiếp cho admin
+            if (aiReply.isNeedHuman()) {
+                // Gửi thông báo tới Admin (ví dụ user ID = 1)
+                messagingTemplate.convertAndSendToUser(
+                        "1", "/queue/admin", chatMessageMapper.toResponse(savedAiMessage)
+                );
+            }
         }
+
 
         return chatMessageMapper.toResponse(savedMessage);
     }
 
-    public List<ChatMessageResponse> getChatHistory(Integer userID, Integer receiverID) {
-        List<ChatMessage> messages;
+//    public List<ChatMessageResponse> getChatHistory(Integer userID, Integer receiverID) {
+//        List<ChatMessage> messages;
+//
+//        if (receiverID == null) {
+//            // Nếu không truyền receiverID → mặc định lấy lịch sử với Admin & AI
+//            messages = chatMessageRepository.findChatWithRoles(userID, List.of(RoleEnum.AI, RoleEnum.ADMIN));
+//        } else {
+//            messages = chatMessageRepository.findChatBetweenUsers(userID, receiverID);
+//        }
+//
+//        return messages.stream()
+//                .map(chatMessageMapper::toResponse)
+//                .collect(Collectors.toList());
+//    }
 
-        if (receiverID.equals(AI_USER_ID)) {
-            messages = chatMessageRepository.findChatWithAI(userID);
-        } else {
-            messages = chatMessageRepository.findChatBetweenUsers(userID, receiverID);
-        }
+    public Map<String, Object> getSeparatedChatHistory(Integer userID) {
+        List<ChatMessage> aiMessages = chatMessageRepository.findChatByUserAndRole(userID, RoleEnum.AI);
+        List<ChatMessage> adminMessages = chatMessageRepository.findChatByUserAndRole(userID, RoleEnum.ADMIN);
+        List<ChatMessage> customerMessages = chatMessageRepository.findChatByUserAndRole(userID, RoleEnum.CUSTOMER);
 
-        return messages.stream()
-                .map(chatMessageMapper::toResponse)
-                .collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
+        result.put("aiMessages", aiMessages.stream().map(chatMessageMapper::toResponse).toList());
+        result.put("adminMessages", adminMessages.stream().map(chatMessageMapper::toResponse).toList());
+
+        //  Tách từng đoạn chat với từng customer
+        Map<Integer, List<ChatMessageResponse>> customerGrouped = customerMessages.stream()
+                .collect(Collectors.groupingBy(
+                        m -> {
+                            //  Xác định từng customer
+                            if (m.getUserID().getId().equals(userID)) {
+                                return m.getReceiver().getId();
+                            } else {
+                                return m.getUserID().getId();
+                            }
+                        },
+                        Collectors.mapping(chatMessageMapper::toResponse, Collectors.toList())
+                ));
+
+        result.put("customerMessages", customerGrouped);
+
+        return result;
     }
+
+
 }

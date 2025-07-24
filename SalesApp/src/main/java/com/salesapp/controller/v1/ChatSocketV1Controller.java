@@ -20,13 +20,12 @@ public class ChatSocketV1Controller {
         // Gọi service xử lý (lưu DB + gửi về)
         ChatMessageResponse response = chatMessageService.sendMessage(request);
 
-        // Nếu gửi đến AI (receiverID == -1) → AI đã phản hồi từ service, không cần gửi lại gì thêm
+
         if (request.getReceiverID() != null && request.getReceiverID() == -1) {
             return; // đã gửi AI reply từ service rồi
         }
 
-        // Nếu là gửi đến người thật (admin hoặc user)
-        // Gửi tới người nhận qua WebSocket channel riêng
+
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(response.getReceiverID()),
                 "/queue/messages",
