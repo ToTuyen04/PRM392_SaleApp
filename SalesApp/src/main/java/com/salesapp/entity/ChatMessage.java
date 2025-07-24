@@ -28,7 +28,7 @@ public class ChatMessage {
     private User receiver;
 
     @Lob
-    @Column(name = "Message", nullable = false)
+    @Column(name = "Message",columnDefinition = "LONGTEXT", nullable = false)
     private String message;
 
     @Column(name = "SentAt", nullable = false)

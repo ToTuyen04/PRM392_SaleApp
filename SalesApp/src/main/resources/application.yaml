@@ -1,4 +1,5 @@
 server:
+  host: 192.168.1.52
   port: 8080
   servlet:
     context-path: /
@@ -9,7 +10,6 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
@@ -30,7 +30,7 @@ jwt:
   refreshable-duration: 604800
 app:
   server:
-    host: 192.168.1.52
+    host: 192.168.1.81
     port: 8080
   gemini:
     api:

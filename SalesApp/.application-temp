@@ -1,4 +1,5 @@
 server:
+  host: 192.168.1.52
   port: 8080
   servlet:
     context-path: /
@@ -27,6 +28,10 @@ jwt:
   signerKey: ${SIGNER_KEY}
   valid-duration: 3600
   refreshable-duration: 604800
+app:
+  server:
+    host: 192.168.1.81
+    port: 8080
   gemini:
     api:
       url: ${GEMINI_API_URL}
