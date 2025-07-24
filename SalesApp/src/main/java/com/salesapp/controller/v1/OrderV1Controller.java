@@ -35,4 +35,27 @@ public class OrderV1Controller {
                 .data(orderService.getOrdersByUser(userId))
                 .build();
     }
+
+    // API cho admin/shipper cập nhật trạng thái giao hàng COD
+    @PutMapping("/cod/{orderId}/delivered")
+    public ResponseObject<OrderResponse> markCODOrderDelivered(@PathVariable int orderId) {
+        OrderResponse order = orderService.updateCODOrderDelivered(orderId);
+        return ResponseObject.<OrderResponse>builder()
+                .status(1000)
+                .message("COD order marked as delivered successfully")
+                .data(order)
+                .build();
+    }
+
+    @PutMapping("/cod/{orderId}/failed")
+    public ResponseObject<OrderResponse> markCODOrderFailed(
+            @PathVariable int orderId,
+            @RequestParam(defaultValue = "Customer not available") String reason) {
+        OrderResponse order = orderService.updateCODOrderFailed(orderId, reason);
+        return ResponseObject.<OrderResponse>builder()
+                .status(1000)
+                .message("COD order marked as delivery failed")
+                .data(order)
+                .build();
+    }
 }

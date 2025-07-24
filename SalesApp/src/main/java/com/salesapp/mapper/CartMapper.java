@@ -20,8 +20,9 @@ public interface CartMapper {
 
     @Mapping(source = "productID.id", target = "productID")
     @Mapping(source = "productID.productName", target = "productName")
-    @Mapping(source = "productID.imageURL", target = "productImage")     // ✅ Mới
-    @Mapping(source = "productID.price", target = "productPrice")        // ✅ Mới
+    @Mapping(source = "productID.imageURL", target = "productImage")
+    @Mapping(source = "productID.price", target = "price")
+    @Mapping(source = "price", target = "subtotal")
     CartItemResponse toCartItem(CartItem cartItem);
 
     List<CartItemResponse> toCartItems(List<CartItem> cartItems);

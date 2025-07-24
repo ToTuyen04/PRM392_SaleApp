@@ -43,9 +43,15 @@ public class OrderService {
         order.setUserID(user);
         order.setPaymentMethod(request.getPaymentMethod());
         order.setBillingAddress(request.getBillingAddress());
-        order.setOrderStatus("processing");
-        order.setOrderDate(Instant.now());
 
+        // Phân biệt status dựa trên payment method
+        if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+            order.setOrderStatus("confirmed"); // COD: confirmed, chờ giao hàng
+        } else {
+            order.setOrderStatus("processing"); // Các phương thức khác: processing
+        }
+
+        order.setOrderDate(Instant.now());
         orderRepository.save(order);
 
         // Tạo Payment gắn vào Order
@@ -53,10 +59,20 @@ public class OrderService {
         payment.setOrderID(order);
         payment.setAmount(cart.getTotalPrice());
         payment.setPaymentDate(Instant.now());
-        payment.setPaymentStatus("Paid");
+
+        // Phân biệt payment status dựa trên payment method
+        if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+            payment.setPaymentStatus("Pending"); // COD: Pending, chờ thanh toán khi giao hàng
+        } else {
+            payment.setPaymentStatus("Paid"); // Các phương thức khác: Paid
+        }
 
         paymentRepository.save(payment);
         order.getPayments().add(payment);
+
+        // Cập nhật cart status thành completed (đã checkout)
+        cart.setStatus("completed");
+        cartRepository.save(cart);
 
         // Gọi Mapper để trả về OrderResponse (trong đó có payments)
         return orderMapper.toOrder(
@@ -133,5 +149,51 @@ public class OrderService {
 
         order.setOrderStatus("cancelled");
         orderRepository.save(order);
+    }
+
+    // Cập nhật order khi giao hàng COD thành công
+    public OrderResponse updateCODOrderDelivered(int orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        // Kiểm tra xem có phải COD không
+        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Cập nhật order status
+        order.setOrderStatus("delivered");
+        orderRepository.save(order);
+
+        // Cập nhật payment status
+        for (Payment payment : order.getPayments()) {
+            if ("Pending".equals(payment.getPaymentStatus())) {
+                payment.setPaymentStatus("Paid");
+                payment.setPaymentDate(Instant.now());
+                paymentRepository.save(payment);
+            }
+        }
+
+        return orderMapper.toOrder(
+                orderRepository.findWithPaymentsById(order.getId())
+                        .orElse(order)
+        );
+    }
+
+    // Cập nhật order khi giao hàng COD thất bại
+    public OrderResponse updateCODOrderFailed(int orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        // Kiểm tra xem có phải COD không
+        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Cập nhật order status
+        order.setOrderStatus("delivery_failed");
+        orderRepository.save(order);
+
+        return orderMapper.toOrder(order);
     }
 }
