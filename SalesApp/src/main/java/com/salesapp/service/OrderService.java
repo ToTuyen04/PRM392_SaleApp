@@ -1,6 +1,11 @@
 package com.salesapp.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.salesapp.dto.CartItemSnapshot;
 import com.salesapp.dto.request.OrderRequest;
+import com.salesapp.dto.response.CartItemResponse;
 import com.salesapp.dto.response.OrderResponse;
 import com.salesapp.dto.response.OrderDetailResponse;
 import com.salesapp.entity.Cart;
@@ -21,7 +26,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +38,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
     private final PaymentRepository paymentRepository;
+    private final ObjectMapper objectMapper;
 
     public OrderResponse createOrder(int userId, OrderRequest request) {
         User user = userRepository.findById(userId)
@@ -41,12 +49,25 @@ public class OrderService {
 
         Cart cart = cartOpt.get();
 
+        // Tạo snapshot của cart items trước khi tạo order
+        List<CartItemSnapshot> cartItemSnapshots = cart.getCartItems().stream()
+                .map(CartItemSnapshot::fromCartItem)
+                .collect(Collectors.toList());
+
+        String cartItemsSnapshotJson;
+        try {
+            cartItemsSnapshotJson = objectMapper.writeValueAsString(cartItemSnapshots);
+        } catch (JsonProcessingException e) {
+            throw new AppException(ErrorCode.UNCATEGORIES_EXCEPTION);
+        }
+
         // Tạo Order
         Order order = new Order();
         order.setCartID(cart);
         order.setUserID(user);
         order.setPaymentMethod(request.getPaymentMethod());
         order.setBillingAddress(request.getBillingAddress());
+        order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
         // Phân biệt status dựa trên payment method
         if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
@@ -88,8 +109,76 @@ public class OrderService {
 
 
     public List<OrderResponse> getOrdersByUser(int userId) {
-        List<Order> orders = orderRepository.findByUserID_IdOrderByIdDesc(userId);
-        return orderMapper.toOrders(orders);
+        List<Order> orders = orderRepository.findWithCartItemsByUserID_IdOrderByIdDesc(userId);
+
+        // Process each order để sử dụng snapshot
+        return orders.stream()
+                .map(order -> {
+                    OrderResponse orderResponse = orderMapper.toOrder(order);
+
+                    // Parse cart items từ snapshot nếu có
+                    if (order.getCartItemsSnapshot() != null) {
+                        try {
+                            List<CartItemSnapshot> snapshots = objectMapper.readValue(
+                                order.getCartItemsSnapshot(),
+                                objectMapper.getTypeFactory().constructCollectionType(List.class, CartItemSnapshot.class)
+                            );
+
+                            List<com.salesapp.dto.response.CartItemResponse> cartItemResponses = snapshots.stream()
+                                .map(this::convertSnapshotToResponse)
+                                .collect(Collectors.toList());
+
+                            orderResponse.setCartItems(cartItemResponses);
+                        } catch (JsonProcessingException e) {
+                            System.err.println("Failed to parse cart items snapshot for order " + order.getId() + ": " + e.getMessage());
+                        }
+                    }
+
+                    return orderResponse;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public OrderResponse getOrderById(int orderId) {
+        Order order = orderRepository.findWithCartItemsById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        // Sử dụng snapshot thay vì cart items hiện tại
+        OrderResponse orderResponse = orderMapper.toOrder(order);
+
+        // Parse cart items từ snapshot
+        if (order.getCartItemsSnapshot() != null) {
+            try {
+                List<CartItemSnapshot> snapshots = objectMapper.readValue(
+                    order.getCartItemsSnapshot(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, CartItemSnapshot.class)
+                );
+
+                // Convert snapshot thành CartItemResponse
+                List<com.salesapp.dto.response.CartItemResponse> cartItemResponses = snapshots.stream()
+                    .map(this::convertSnapshotToResponse)
+                    .collect(Collectors.toList());
+
+                orderResponse.setCartItems(cartItemResponses);
+            } catch (JsonProcessingException e) {
+                // Fallback về cart items hiện tại nếu parse snapshot thất bại
+                System.err.println("Failed to parse cart items snapshot: " + e.getMessage());
+            }
+        }
+
+        return orderResponse;
+    }
+
+    private com.salesapp.dto.response.CartItemResponse convertSnapshotToResponse(CartItemSnapshot snapshot) {
+        com.salesapp.dto.response.CartItemResponse response = new com.salesapp.dto.response.CartItemResponse();
+        response.setId(snapshot.getCartItemId());
+        response.setProductID(snapshot.getProductId());
+        response.setProductName(snapshot.getProductName());
+        response.setProductImage(snapshot.getProductImage());
+        response.setQuantity(snapshot.getQuantity());
+        response.setPrice(snapshot.getPrice());
+        response.setSubtotal(snapshot.getSubtotal());
+        return response;
     }
 
     // Tạo order cho VNPay (chưa thanh toán)
@@ -109,6 +198,18 @@ public class OrderService {
         System.out.println("Cart Items Count: " + cart.getCartItems().size());
         System.out.println("==================");
 
+        // Tạo snapshot của cart items trước khi tạo order
+        List<CartItemSnapshot> cartItemSnapshots = cart.getCartItems().stream()
+                .map(CartItemSnapshot::fromCartItem)
+                .collect(Collectors.toList());
+
+        String cartItemsSnapshotJson;
+        try {
+            cartItemsSnapshotJson = objectMapper.writeValueAsString(cartItemSnapshots);
+        } catch (JsonProcessingException e) {
+            throw new AppException(ErrorCode.UNCATEGORIES_EXCEPTION);
+        }
+
         // Tạo Order với status pending
         Order order = new Order();
         order.setCartID(cart);
@@ -117,6 +218,7 @@ public class OrderService {
         order.setBillingAddress(request.getBillingAddress());
         order.setOrderStatus("pending"); // Chờ thanh toán
         order.setOrderDate(Instant.now());
+        order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
         orderRepository.save(order);
 
@@ -177,12 +279,7 @@ public class OrderService {
         );
     }
 
-    // Lấy order theo ID
-    public OrderResponse getOrderById(int orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-        return orderMapper.toOrder(order);
-    }
+
 
     // Lấy order detail với thông tin user đầy đủ
     public OrderDetailResponse getOrderDetailById(int orderId) {
@@ -194,8 +291,43 @@ public class OrderService {
         String phoneNumber = order.getUserID().getPhoneNumber();
         String email = order.getUserID().getEmail();
 
-        // Tính total amount
-        java.math.BigDecimal totalAmount = order.getCartID().getTotalPrice();
+        // Parse cartItemsSnapshot to get cart items
+        List<CartItemResponse> cartItems = null;
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+        
+        try {
+            if (order.getCartItemsSnapshot() != null && !order.getCartItemsSnapshot().isEmpty()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                TypeReference<List<CartItemSnapshot>> typeRef = new TypeReference<List<CartItemSnapshot>>() {};
+                List<CartItemSnapshot> snapshots = objectMapper.readValue(order.getCartItemsSnapshot(), typeRef);
+                
+                // Convert CartItemSnapshot to CartItemResponse
+                cartItems = snapshots.stream().map(snapshot -> {
+                    CartItemResponse response = new CartItemResponse();
+                    response.setId(snapshot.getCartItemId());
+                    response.setProductID(snapshot.getProductId());
+                    response.setProductName(snapshot.getProductName());
+                    response.setProductImage(snapshot.getProductImage());
+                    response.setQuantity(snapshot.getQuantity());
+                    response.setPrice(snapshot.getPrice());
+                    response.setSubtotal(snapshot.getSubtotal());
+                    return response;
+                }).collect(Collectors.toList());
+                
+                // Tính total amount từ cart items snapshot thay vì từ cart hiện tại
+                if (cartItems != null) {
+                    totalAmount = cartItems.stream()
+                        .map(CartItemResponse::getSubtotal)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing cartItemsSnapshot: " + e.getMessage());
+            e.printStackTrace();
+            cartItems = new java.util.ArrayList<>();
+            // Fallback to cart total if snapshot parsing fails
+            totalAmount = order.getCartID().getTotalPrice();
+        }
 
         // Lấy transaction ID mới nhất từ VNPay callback
         String latestTransactionId = order.getPayments().stream()
@@ -229,6 +361,7 @@ public class OrderService {
                 .username(username)
                 .phoneNumber(phoneNumber)
                 .email(email)
+                .cartItems(cartItems)
                 .totalAmount(totalAmount)
                 .formattedOrderDate(formattedOrderDate)
                 .latestTransactionId(latestTransactionId)

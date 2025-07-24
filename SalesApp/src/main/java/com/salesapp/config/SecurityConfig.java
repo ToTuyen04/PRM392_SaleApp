@@ -81,6 +81,12 @@ public class SecurityConfig {
         corsConfiguration.addAllowedMethod("*");
         corsConfiguration.addAllowedHeader("*");
 
+        corsConfiguration.addAllowedOrigin("http://192.168.1.81:8080");
+        // hoặc cho phép tất cả local networks:
+        corsConfiguration.addAllowedOriginPattern("http://192.168.*:*");
+        corsConfiguration.addAllowedOriginPattern("http://10.*:*");
+        corsConfiguration.addAllowedOriginPattern("http://localhost:*");
+
         UrlBasedCorsConfigurationSource url = new UrlBasedCorsConfigurationSource();
         url.registerCorsConfiguration("/**", corsConfiguration);
 

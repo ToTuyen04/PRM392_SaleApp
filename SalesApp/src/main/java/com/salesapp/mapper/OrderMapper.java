@@ -7,11 +7,12 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {PaymentMapper.class})
+@Mapper(componentModel = "spring", uses = {PaymentMapper.class, CartItemMapper.class})
 public interface OrderMapper {
 
     @Mapping(source = "cartID.id", target = "cartID")
     @Mapping(source = "userID.id", target = "userID")
+    @Mapping(source = "cartID.cartItems", target = "cartItems")
     OrderResponse toOrder(Order order);
 
     List<OrderResponse> toOrders(List<Order> orders);

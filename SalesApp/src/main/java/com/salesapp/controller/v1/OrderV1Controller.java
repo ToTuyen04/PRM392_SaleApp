@@ -36,6 +36,15 @@ public class OrderV1Controller {
                 .build();
     }
 
+    @GetMapping("/detail/{orderId}")
+    public ResponseObject<OrderResponse> getOrderById(@PathVariable int orderId) {
+        return ResponseObject.<OrderResponse>builder()
+                .status(1000)
+                .message("Order detail retrieved")
+                .data(orderService.getOrderById(orderId))
+                .build();
+    }
+
     // API cho admin/shipper cập nhật trạng thái giao hàng COD
     @PutMapping("/cod/{orderId}/delivered")
     public ResponseObject<OrderResponse> markCODOrderDelivered(@PathVariable int orderId) {
