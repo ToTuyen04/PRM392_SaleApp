@@ -35,7 +35,10 @@ public class SecurityConfig {
             "/v*/products", "/v*/products/*", "/v*/products/**",
             "/v*/categories", "/v*/categories/*", "/v*/categories/**",
             "/v*/users", "/v*/users/*", "/v*/users/**",
-            "/*/users", "/*/users/*"
+            "/*/users", "/*/users/*",
+            // VNPay endpoints - VNPay callback không có JWT token
+            "/v*/vnpay/payment-callback", "/v*/vnpay/payment-result",
+            "/v*/vnpay/**"
     };
 
     @Bean

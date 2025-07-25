@@ -22,13 +22,10 @@ import com.salesapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -107,9 +104,41 @@ public class OrderService {
 
     }
 
-
     public List<OrderResponse> getOrdersByUser(int userId) {
         List<Order> orders = orderRepository.findWithCartItemsByUserID_IdOrderByIdDesc(userId);
+
+        // Process each order để sử dụng snapshot
+        return orders.stream()
+                .map(order -> {
+                    OrderResponse orderResponse = orderMapper.toOrder(order);
+
+                    // Parse cart items từ snapshot nếu có
+                    if (order.getCartItemsSnapshot() != null) {
+                        try {
+                            List<CartItemSnapshot> snapshots = objectMapper.readValue(
+                                order.getCartItemsSnapshot(),
+                                objectMapper.getTypeFactory().constructCollectionType(List.class, CartItemSnapshot.class)
+                            );
+
+                            List<com.salesapp.dto.response.CartItemResponse> cartItemResponses = snapshots.stream()
+                                .map(this::convertSnapshotToResponse)
+                                .collect(Collectors.toList());
+
+                            orderResponse.setCartItems(cartItemResponses);
+                        } catch (JsonProcessingException e) {
+                            System.err.println("Failed to parse cart items snapshot for order " + order.getId() + ": " + e.getMessage());
+                        }
+                    }
+
+                    return orderResponse;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // Lấy tất cả orders (admin/staff function)
+    public List<OrderResponse> getAll() {
+        // Lấy tất cả orders, sắp xếp theo ID giảm dần (mới nhất trước)
+        List<Order> orders = orderRepository.findAllByOrderByIdDesc();
 
         // Process each order để sử dụng snapshot
         return orders.stream()
@@ -379,7 +408,7 @@ public class OrderService {
     }
 
     // Cập nhật order khi giao hàng COD thành công
-    public OrderResponse updateCODOrderDelivered(int orderId) {
+    public OrderResponse updateCODOrderDelivered(int orderId, String status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
@@ -389,17 +418,17 @@ public class OrderService {
         }
 
         // Cập nhật order status
-        order.setOrderStatus("delivered");
+        order.setOrderStatus(status);
         orderRepository.save(order);
 
         // Cập nhật payment status
-        for (Payment payment : order.getPayments()) {
-            if ("Pending".equals(payment.getPaymentStatus())) {
-                payment.setPaymentStatus("Paid");
-                payment.setPaymentDate(Instant.now());
-                paymentRepository.save(payment);
-            }
-        }
+//        for (Payment payment : order.getPayments()) {
+//            if ("Pending".equals(payment.getPaymentStatus())) {
+//                payment.setPaymentStatus("Paid");
+//                payment.setPaymentDate(Instant.now());
+//                paymentRepository.save(payment);
+//            }
+//        }
 
         return orderMapper.toOrder(
                 orderRepository.findWithPaymentsById(order.getId())
