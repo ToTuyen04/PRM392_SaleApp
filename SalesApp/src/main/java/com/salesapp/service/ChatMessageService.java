@@ -28,6 +28,8 @@ public class ChatMessageService {
     private final ChatMessageMapper chatMessageMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final GeminiService geminiService;
+    private final GeminiTrainingService geminiTrainingService;
+    private final SmartAIService smartAIService;
 
     private static final Integer AI_USER_ID = 23;
 
@@ -49,9 +51,10 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
-        // 🔁 Nếu gửi tới AI → phản hồi tự động
+        // 🔁 Nếu gửi tới AI → phản hồi tự động với Smart AI (có khả năng call API)
         if (receiver.getId().equals(AI_USER_ID)) {
-            Gemini aiReply = geminiService.getResponseFromAI(request.getMessage());
+            // Use Smart AI service để get response với real-time API data
+            Gemini aiReply = smartAIService.getSmartResponse(request.getMessage());
 
             ChatMessage aiMessage = new ChatMessage();
             aiMessage.setUserID(receiver);        // AI gửi

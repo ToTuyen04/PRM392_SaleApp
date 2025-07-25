@@ -38,7 +38,12 @@ public class SecurityConfig {
             "/*/users", "/*/users/*",
             // VNPay endpoints - VNPay callback không có JWT token
             "/v*/vnpay/payment-callback", "/v*/vnpay/payment-result",
-            "/v*/vnpay/**"
+            "/v*/vnpay/**",
+            // AI Training endpoints - For development and testing
+            "/v*/ai/train", "/v*/ai/test", "/v*/ai/api-docs", "/v*/ai/training/**",
+            "/v*/ai-training/**",
+            // Smart AI endpoints - AI with API calling capability
+            "/v*/smart-ai/**"
     };
 
     @Bean
@@ -75,5 +80,10 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);
+    }
+
+    @Bean
+    public org.springframework.web.client.RestTemplate restTemplate() {
+        return new org.springframework.web.client.RestTemplate();
     }
 }

@@ -47,11 +47,21 @@ public class GeminiService {
         """;
 
     public Gemini getResponseFromAI(String userMessage) {
+        return getResponseFromAIWithContext(userMessage, "");
+    }
+
+    public Gemini getResponseFromAIWithContext(String userMessage, String additionalContext) {
         String requestUrl = geminiApiUrl + "?key=" + geminiApiKey;
-        String fullPrompt = SYSTEM_PROMPT + "\n\nKhách hàng: " + userMessage;
+        
+        // Enhanced prompt with context
+        String enhancedPrompt = SYSTEM_PROMPT;
+        if (additionalContext != null && !additionalContext.trim().isEmpty()) {
+            enhancedPrompt += "\n\n=== THÔNG TIN VỀ HỆ THỐNG SHOP ===\n" + additionalContext + "\n\n";
+        }
+        enhancedPrompt += "\n\nKhách hàng: " + userMessage;
 
         Map<String, Object> requestBody = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", fullPrompt))))
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", enhancedPrompt))))
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -59,9 +69,11 @@ public class GeminiService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(requestUrl, HttpMethod.POST, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(requestUrl, HttpMethod.POST, entity, 
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
 
             // ✅ Lấy ra danh sách candidates từ response
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
             if (candidates == null || candidates.isEmpty()) {
                 return new Gemini("Không có phản hồi từ AI.", false);
@@ -69,7 +81,9 @@ public class GeminiService {
 
             // ✅ Lấy phần text: candidates[0] → content → parts[0] → text
             Map<String, Object> firstCandidate = candidates.get(0);
+            @SuppressWarnings("unchecked")
             Map<String, Object> content = (Map<String, Object>) firstCandidate.get("content");
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
             String text = (String) parts.get(0).get("text");
 
