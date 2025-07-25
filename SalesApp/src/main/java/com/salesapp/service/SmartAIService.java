@@ -3,12 +3,13 @@ package com.salesapp.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesapp.entity.Gemini;
+import com.salesapp.dto.response.ProductResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class SmartAIService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final GeminiService geminiService;
+    private final ProductService productService;
     
     @Value("${app.server.host:localhost}")
     private String serverHost;
@@ -102,24 +104,17 @@ public class SmartAIService {
     }
 
     /**
-     * Call Product API và filter results
+     * Call Product API và filter results - FIXED: Direct service call
      */
     private String callProductAPI(String baseUrl, String userMessage) {
         try {
-            // Call GET all products
-            String url = baseUrl + "/v1/products";
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            log.info("Getting products directly from ProductService (avoiding HTTP loop)");
             
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                return "Failed to fetch products";
-            }
+            // Get products directly từ service - sử dụng method có sẵn
+            List<ProductResponse> allProducts = productService.getAllProducts();
             
-            // Parse response
-            JsonNode rootNode = objectMapper.readTree(response.getBody());
-            JsonNode dataNode = rootNode.get("data");
-            
-            if (dataNode == null || !dataNode.isArray()) {
-                return "No products found";
+            if (allProducts == null || allProducts.isEmpty()) {
+                return "No products found in database";
             }
             
             // Filter products based on user query
@@ -128,15 +123,15 @@ public class SmartAIService {
             result.append("PRODUCTS_DATA:\n");
             
             int count = 0;
-            for (JsonNode product : dataNode) {
-                String productName = product.get("productName").asText("");
-                String description = product.get("description").asText("");
+            for (ProductResponse product : allProducts) {
+                String productName = product.getProductName() != null ? product.getProductName() : "";
+                String description = product.getBriefDescription() != null ? product.getBriefDescription() : "";
                 
                 // Check if product matches search keyword
                 if (containsKeyword(productName, searchKeyword) || 
                     containsKeyword(description, searchKeyword)) {
                     
-                    result.append(formatProductInfo(product));
+                    result.append(formatProductInfoDirect(product));
                     count++;
                     
                     if (count >= 5) break; // Limit to 5 products
@@ -147,6 +142,7 @@ public class SmartAIService {
                 result.append("No products found matching: ").append(searchKeyword);
             }
             
+            log.info("Found {} products matching keyword: {}", count, searchKeyword);
             return result.toString();
             
         } catch (Exception e) {
@@ -206,6 +202,33 @@ public class SmartAIService {
         
         if (product.has("categoryID") && product.get("categoryID").has("categoryName")) {
             info.append("  Category: ").append(product.get("categoryID").get("categoryName").asText("N/A")).append("\n");
+        }
+        
+        info.append("\n");
+        
+        return info.toString();
+    }
+
+    /**
+     * Format ProductResponse cho AI - FIXED: Direct method
+     */
+    private String formatProductInfoDirect(ProductResponse product) {
+        StringBuilder info = new StringBuilder();
+        
+        info.append("- Product: ").append(product.getProductName() != null ? product.getProductName() : "N/A").append("\n");
+        info.append("  Price: ").append(formatPrice(product.getPrice() != null ? product.getPrice().doubleValue() : 0)).append("\n");
+        info.append("  Brief Description: ").append(product.getBriefDescription() != null ? product.getBriefDescription() : "N/A").append("\n");
+        
+        if (product.getFullDescription() != null && !product.getFullDescription().isEmpty()) {
+            info.append("  Full Description: ").append(product.getFullDescription()).append("\n");
+        }
+        
+        if (product.getTechnicalSpecifications() != null && !product.getTechnicalSpecifications().isEmpty()) {
+            info.append("  Technical Specs: ").append(product.getTechnicalSpecifications()).append("\n");
+        }
+        
+        if (product.getCategoryID() != null) {
+            info.append("  Category ID: ").append(product.getCategoryID()).append("\n");
         }
         
         info.append("\n");
