@@ -33,6 +33,9 @@ public class SecurityConfig {
     private final String[] PUBLIC_ENDPOINTS = {
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
             "/v*/auth/login", "/v*/auth/introspect", "/v*/auth/register", "/v*/auth/logout", "/v*/auth/refresh",
+            "/v*/products", "/v*/products/*", "/v*/products/**",
+            "/v*/categories", "/v*/categories/*", "/v*/categories/**",
+            "/v*/users", "/v*/users/*", "/v*/users/**",
             "/*/users", "/*/users/*"
     };
 
@@ -46,8 +49,8 @@ public class SecurityConfig {
                                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                                 .authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll() // Ví dụ: Cho phép login
-                        .anyRequest().permitAll()); // Các request khác cần xác thực
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll() // Ví dụ: Cho phép login
+                        .anyRequest().authenticated()); // Các request khác cần xác thực
 
 
 
