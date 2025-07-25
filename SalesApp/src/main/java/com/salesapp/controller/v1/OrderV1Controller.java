@@ -65,7 +65,7 @@ public class OrderV1Controller {
                 .build();
     }
 
-    @PutMapping("/cod/{orderId}/processing")
+    @PutMapping("/{orderId}/processing")
     public ResponseObject<OrderResponse> markCODOrderProcessing(@PathVariable int orderId) {
         OrderResponse order = orderService.updateCODOrderDelivered(orderId, "processing");
         return ResponseObject.<OrderResponse>builder()
@@ -75,7 +75,7 @@ public class OrderV1Controller {
                 .build();
     }
 
-    @PutMapping("/cod/{orderId}/cancelled")
+    @PutMapping("/{orderId}/cancelled")
     public ResponseObject<OrderResponse> markCODOrderCancelled(@PathVariable int orderId) {
         OrderResponse order = orderService.updateCODOrderDelivered(orderId, "cancelled");
         return ResponseObject.<OrderResponse>builder()

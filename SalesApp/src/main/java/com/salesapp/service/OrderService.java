@@ -67,11 +67,11 @@ public class OrderService {
         order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
         // Phân biệt status dựa trên payment method
-        if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
-            order.setOrderStatus("confirmed"); // COD: confirmed, chờ giao hàng
-        } else {
-            order.setOrderStatus("processing"); // Các phương thức khác: processing
-        }
+        //if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+            //order.setOrderStatus("confirmed"); // COD: confirmed, chờ giao hàng
+        //} else {
+            order.setOrderStatus("Pending"); // Các phương thức khác: processing
+        //}
 
         order.setOrderDate(Instant.now());
         orderRepository.save(order);
@@ -245,7 +245,7 @@ public class OrderService {
         order.setUserID(user);
         order.setPaymentMethod("VNPAY");
         order.setBillingAddress(request.getBillingAddress());
-        order.setOrderStatus("pending"); // Chờ thanh toán
+        order.setOrderStatus("Pending"); // Chờ thanh toán
         order.setOrderDate(Instant.now());
         order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
@@ -273,7 +273,7 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         // Cập nhật status order
-        order.setOrderStatus("Processing");
+        order.setOrderStatus("Pending");
         orderRepository.save(order);
 
         // Tìm payment hiện tại và cập nhật thay vì tạo mới

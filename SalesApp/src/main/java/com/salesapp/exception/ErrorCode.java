@@ -38,6 +38,7 @@ public enum ErrorCode {
 
     /// Payment
     PAYMENT_INVALID_SIGN(6001, "Payment signature is invalid", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_STATUS_TRANSITION(6003, "Invalid payment status transition", HttpStatus.BAD_REQUEST),
 
     /// General
     INVALID_REQUEST(9001, "Invalid request", HttpStatus.BAD_REQUEST),
