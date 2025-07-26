@@ -13,6 +13,9 @@ public interface OrderMapper {
     @Mapping(source = "cartID.id", target = "cartID")
     @Mapping(source = "userID.id", target = "userID")
     @Mapping(source = "cartID.cartItems", target = "cartItems")
+    @Mapping(source = "userID.username", target = "username")
+    @Mapping(source = "userID.phoneNumber", target = "phoneNumber")
+    @Mapping(source = "userID.email", target = "email")
     OrderResponse toOrder(Order order);
 
     List<OrderResponse> toOrders(List<Order> orders);

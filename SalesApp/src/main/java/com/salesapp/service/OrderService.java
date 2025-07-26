@@ -97,10 +97,15 @@ public class OrderService {
         cartRepository.save(cart);
 
         // Gọi Mapper để trả về OrderResponse (trong đó có payments)
-        return orderMapper.toOrder(
+        OrderResponse orderResponse = orderMapper.toOrder(
                 orderRepository.findWithPaymentsById(order.getId())
                         .orElse(order)
         );
+        
+        // Set totalAmount từ cart total
+        orderResponse.setTotalAmount(cart.getTotalPrice());
+        
+        return orderResponse;
 
     }
 
