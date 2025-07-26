@@ -36,6 +36,8 @@ public class SecurityConfig {
             "/v*/categories", "/v*/categories/*", "/v*/categories/**",
             "/v*/users", "/v*/users/*", "/v*/users/**",
             "/*/users", "/*/users/*",
+            // Order endpoints - For admin dashboard access
+            //"/v*/orders", "/v*/orders/*", "/v*/orders/**",
             // VNPay endpoints - VNPay callback không có JWT token
             "/v*/vnpay/payment-callback", "/v*/vnpay/payment-result",
             "/v*/vnpay/**",

@@ -413,9 +413,9 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         // Kiểm tra xem có phải COD không
-        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
+        // if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+        //     throw new AppException(ErrorCode.INVALID_REQUEST);
+        // }
 
         // Cập nhật order status
         order.setOrderStatus(status);
