@@ -2,6 +2,7 @@ package com.salesapp.service;
 
 import com.salesapp.dto.request.ChatMessageRequest;
 import com.salesapp.dto.response.ChatMessageResponse;
+import com.salesapp.dto.response.CustomerUserResponse;
 import com.salesapp.entity.ChatMessage;
 import com.salesapp.entity.Gemini;
 import com.salesapp.entity.User;
@@ -81,20 +82,7 @@ public class ChatMessageService {
         return chatMessageMapper.toResponse(savedMessage);
     }
 
-//    public List<ChatMessageResponse> getChatHistory(Integer userID, Integer receiverID) {
-//        List<ChatMessage> messages;
-//
-//        if (receiverID == null) {
-//            // Nếu không truyền receiverID → mặc định lấy lịch sử với Admin & AI
-//            messages = chatMessageRepository.findChatWithRoles(userID, List.of(RoleEnum.AI, RoleEnum.ADMIN));
-//        } else {
-//            messages = chatMessageRepository.findChatBetweenUsers(userID, receiverID);
-//        }
-//
-//        return messages.stream()
-//                .map(chatMessageMapper::toResponse)
-//                .collect(Collectors.toList());
-//    }
+
 
     public Map<String, Object> getSeparatedChatHistory(Integer userID) {
         List<ChatMessage> aiMessages = chatMessageRepository.findChatByUserAndRole(userID, RoleEnum.AI);
@@ -124,5 +112,15 @@ public class ChatMessageService {
         return result;
     }
 
+    public List<ChatMessage> getAllMessagesBetweenUsersAndAdminOrAI() {
+        return chatMessageRepository.findAllByOrderBySentAtAsc(); // hoặc một hàm tùy chỉnh nếu muốn lọc từ DB
+    }
+
+    public List<CustomerUserResponse> getAllCustomerUsersInChat() {
+        List<User> customers = chatMessageRepository.findDistinctCustomersWhoSentMessages();
+        return customers.stream()
+                .map(user -> new CustomerUserResponse(user.getId(), user.getUsername(), user.getEmail()))
+                .toList();
+    }
 
 }
