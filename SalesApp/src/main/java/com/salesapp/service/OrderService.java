@@ -22,6 +22,7 @@ import com.salesapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -130,6 +131,13 @@ public class OrderService {
                                 .collect(Collectors.toList());
 
                             orderResponse.setCartItems(cartItemResponses);
+                            
+                            // Calculate total amount from cart items
+                            BigDecimal totalAmount = snapshots.stream()
+                                .map(snapshot -> snapshot.getPrice().multiply(BigDecimal.valueOf(snapshot.getQuantity())))
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                            orderResponse.setTotalAmount(totalAmount);
+                            
                         } catch (JsonProcessingException e) {
                             System.err.println("Failed to parse cart items snapshot for order " + order.getId() + ": " + e.getMessage());
                         }
