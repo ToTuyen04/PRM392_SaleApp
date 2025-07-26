@@ -22,13 +22,10 @@ import com.salesapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,11 +67,11 @@ public class OrderService {
         order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
         // Phân biệt status dựa trên payment method
-        if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
-            order.setOrderStatus("confirmed"); // COD: confirmed, chờ giao hàng
-        } else {
-            order.setOrderStatus("processing"); // Các phương thức khác: processing
-        }
+        //if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+            //order.setOrderStatus("confirmed"); // COD: confirmed, chờ giao hàng
+        //} else {
+            order.setOrderStatus("Pending"); // Các phương thức khác: processing
+        //}
 
         order.setOrderDate(Instant.now());
         orderRepository.save(order);
@@ -107,9 +104,41 @@ public class OrderService {
 
     }
 
-
     public List<OrderResponse> getOrdersByUser(int userId) {
         List<Order> orders = orderRepository.findWithCartItemsByUserID_IdOrderByIdDesc(userId);
+
+        // Process each order để sử dụng snapshot
+        return orders.stream()
+                .map(order -> {
+                    OrderResponse orderResponse = orderMapper.toOrder(order);
+
+                    // Parse cart items từ snapshot nếu có
+                    if (order.getCartItemsSnapshot() != null) {
+                        try {
+                            List<CartItemSnapshot> snapshots = objectMapper.readValue(
+                                order.getCartItemsSnapshot(),
+                                objectMapper.getTypeFactory().constructCollectionType(List.class, CartItemSnapshot.class)
+                            );
+
+                            List<com.salesapp.dto.response.CartItemResponse> cartItemResponses = snapshots.stream()
+                                .map(this::convertSnapshotToResponse)
+                                .collect(Collectors.toList());
+
+                            orderResponse.setCartItems(cartItemResponses);
+                        } catch (JsonProcessingException e) {
+                            System.err.println("Failed to parse cart items snapshot for order " + order.getId() + ": " + e.getMessage());
+                        }
+                    }
+
+                    return orderResponse;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // Lấy tất cả orders (admin/staff function)
+    public List<OrderResponse> getAll() {
+        // Lấy tất cả orders, sắp xếp theo ID giảm dần (mới nhất trước)
+        List<Order> orders = orderRepository.findAllByOrderByIdDesc();
 
         // Process each order để sử dụng snapshot
         return orders.stream()
@@ -216,7 +245,7 @@ public class OrderService {
         order.setUserID(user);
         order.setPaymentMethod("VNPAY");
         order.setBillingAddress(request.getBillingAddress());
-        order.setOrderStatus("pending"); // Chờ thanh toán
+        order.setOrderStatus("Pending"); // Chờ thanh toán
         order.setOrderDate(Instant.now());
         order.setCartItemsSnapshot(cartItemsSnapshotJson); // Lưu snapshot
 
@@ -244,7 +273,7 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         // Cập nhật status order
-        order.setOrderStatus("Processing");
+        order.setOrderStatus("Pending");
         orderRepository.save(order);
 
         // Tìm payment hiện tại và cập nhật thay vì tạo mới
@@ -379,27 +408,27 @@ public class OrderService {
     }
 
     // Cập nhật order khi giao hàng COD thành công
-    public OrderResponse updateCODOrderDelivered(int orderId) {
+    public OrderResponse updateCODOrderDelivered(int orderId, String status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         // Kiểm tra xem có phải COD không
-        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
+        // if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+        //     throw new AppException(ErrorCode.INVALID_REQUEST);
+        // }
 
         // Cập nhật order status
-        order.setOrderStatus("delivered");
+        order.setOrderStatus(status);
         orderRepository.save(order);
 
         // Cập nhật payment status
-        for (Payment payment : order.getPayments()) {
-            if ("Pending".equals(payment.getPaymentStatus())) {
-                payment.setPaymentStatus("Paid");
-                payment.setPaymentDate(Instant.now());
-                paymentRepository.save(payment);
-            }
-        }
+//        for (Payment payment : order.getPayments()) {
+//            if ("Pending".equals(payment.getPaymentStatus())) {
+//                payment.setPaymentStatus("Paid");
+//                payment.setPaymentDate(Instant.now());
+//                paymentRepository.save(payment);
+//            }
+//        }
 
         return orderMapper.toOrder(
                 orderRepository.findWithPaymentsById(order.getId())

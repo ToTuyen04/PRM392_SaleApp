@@ -27,6 +27,15 @@ public class OrderV1Controller {
                 .build();
     }
 
+    @GetMapping
+    public ResponseObject<List<OrderResponse>> getAllOrders() {
+        return ResponseObject.<List<OrderResponse>>builder()
+                .status(1000)
+                .message("Orders retrieved")
+                .data(orderService.getAll())
+                .build();
+    }
+
     @GetMapping("/{userId}")
     public ResponseObject<List<OrderResponse>> getOrders(@PathVariable int userId) {
         return ResponseObject.<List<OrderResponse>>builder()
@@ -46,9 +55,9 @@ public class OrderV1Controller {
     }
 
     // API cho admin/shipper cập nhật trạng thái giao hàng COD
-    @PutMapping("/cod/{orderId}/delivered")
+    @PutMapping("/{orderId}/delivered")
     public ResponseObject<OrderResponse> markCODOrderDelivered(@PathVariable int orderId) {
-        OrderResponse order = orderService.updateCODOrderDelivered(orderId);
+        OrderResponse order = orderService.updateCODOrderDelivered(orderId, "delivered");
         return ResponseObject.<OrderResponse>builder()
                 .status(1000)
                 .message("COD order marked as delivered successfully")
@@ -56,7 +65,27 @@ public class OrderV1Controller {
                 .build();
     }
 
-    @PutMapping("/cod/{orderId}/failed")
+    @PutMapping("/{orderId}/processing")
+    public ResponseObject<OrderResponse> markCODOrderProcessing(@PathVariable int orderId) {
+        OrderResponse order = orderService.updateCODOrderDelivered(orderId, "processing");
+        return ResponseObject.<OrderResponse>builder()
+                .status(1000)
+                .message("COD order marked as processing successfully")
+                .data(order)
+                .build();
+    }
+
+    @PutMapping("/{orderId}/cancelled")
+    public ResponseObject<OrderResponse> markCODOrderCancelled(@PathVariable int orderId) {
+        OrderResponse order = orderService.updateCODOrderDelivered(orderId, "cancelled");
+        return ResponseObject.<OrderResponse>builder()
+                .status(1000)
+                .message("COD order marked as cancelled successfully")
+                .data(order)
+                .build();
+    }
+    //---------------------------------------------------------------------------------------
+    @PutMapping("/{orderId}/failed")
     public ResponseObject<OrderResponse> markCODOrderFailed(
             @PathVariable int orderId,
             @RequestParam(defaultValue = "Customer not available") String reason) {

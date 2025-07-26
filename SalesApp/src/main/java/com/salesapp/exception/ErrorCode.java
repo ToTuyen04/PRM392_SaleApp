@@ -15,7 +15,7 @@ public enum ErrorCode {
     EMAL_EXIST(1001, "This email is already in used", HttpStatus.CONFLICT),
     PHONE_EXIST(1002, "This phone is already in used", HttpStatus.CONFLICT),
     UNAUTHORIZE(1003, "You do not have permission", HttpStatus.UNAUTHORIZED),
-    UNAUTHENTICATED(1004, "Unauthenticated", HttpStatus.UNAUTHORIZED),
+    UNAUTHENTICATED(1004, "Your session is timeout. Please login again!", HttpStatus.UNAUTHORIZED),
     USER_NOTFOUND(1005, "User not found",HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(1006, "User not found", HttpStatus.NOT_FOUND),
     INCORECT_PASSWORD(1007, "Password is incorrect", HttpStatus.BAD_REQUEST),
@@ -38,6 +38,7 @@ public enum ErrorCode {
 
     /// Payment
     PAYMENT_INVALID_SIGN(6001, "Payment signature is invalid", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_STATUS_TRANSITION(6003, "Invalid payment status transition", HttpStatus.BAD_REQUEST),
 
     /// General
     INVALID_REQUEST(9001, "Invalid request", HttpStatus.BAD_REQUEST),

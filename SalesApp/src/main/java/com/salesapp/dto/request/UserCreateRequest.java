@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserCreateRequest {
     String username;
-    String passwordHash;
+    String password; // Đổi từ passwordHash thành password
     String email;
     String phoneNumber;
     String address;

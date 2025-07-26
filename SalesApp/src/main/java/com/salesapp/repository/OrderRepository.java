@@ -20,4 +20,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     
     @EntityGraph(attributePaths = {"cartID.cartItems.productID", "payments"})
     Optional<Order> findWithCartItemsById(Integer id);
+    
+    // Lấy tất cả orders, sắp xếp theo ID giảm dần (admin/staff function)
+    @EntityGraph(attributePaths = {"cartID.cartItems.productID", "payments"})
+    List<Order> findAllByOrderByIdDesc();
 }
